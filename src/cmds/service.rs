@@ -1,3 +1,7 @@
+//! `service` 子命令：管理 systemd 用户服务 `mihomo.service`。
+//!
+//! `restart` 重启后轮询 API（最长 10 秒）等待恢复，避免重启期间调用方误判服务失败。
+
 use crate::api::ApiClient;
 use crate::cli::ServiceAction;
 use crate::models::Version;

@@ -1,3 +1,8 @@
+//! `proxy` 子命令：节点列表、延迟测试、切换选中节点。
+//!
+//! 延迟测试走 mihomo 的 `/group/{name}/delay`（组内整体测）与 `/proxies/{name}/delay`
+//! （单节点测）端点；`update` 等价于 `sub update`（执行本机订阅更新脚本）。
+
 use crate::api::ApiClient;
 use crate::cli::ProxyAction;
 use crate::models::{ProxiesResp, Proxy};

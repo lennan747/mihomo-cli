@@ -1,3 +1,5 @@
+//! `status` 子命令：版本、运行模式、端口与各策略组当前选中的总览。
+
 use crate::api::ApiClient;
 use crate::models::{Configs, ProxiesResp, Version};
 use anyhow::Result;

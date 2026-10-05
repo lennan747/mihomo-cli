@@ -10,10 +10,17 @@ mihomo-cli 是一个用 Rust 编写的命令行工具，用于管理本机运行
 
 - 构建：`cargo build`（release 版本用 `cargo build --release`）
 - 运行：`cargo run -- <子命令>`，或使用已编译的二进制（`target/release/mihomo-cli`）
-- 检查：`cargo check`；代码检查可用 `cargo clippy`
+- 检查：`cargo check`；代码检查可用 `cargo clippy`（门禁为 `cargo clippy --all-targets -- -D warnings`）；格式 `cargo fmt --check`
 - 依赖：`anyhow`、`clap` 4（derive 模式，支持 env 回退）、`reqwest` 0.12（rustls）、`tokio`、`tokio-tungstenite`（WebSocket 日志流）、`serde`/`serde_json`、`comfy-table`（表格输出）、`futures-util`
 
-Rust edition 2021，无 workspace，单 crate，无 README。
+Rust edition 2021，无 workspace，单 crate（`rust-version = 1.80`）。GitHub Actions CI（`.github/workflows/ci.yml`）执行 fmt + clippy + test。
+
+## 项目文档
+
+- `README.md` — 面向用户的完整说明（安装、全部命令、运行时环境、故障排查）
+- `CHANGELOG.md` — 变更日志（Keep a Changelog 格式，发版时更新）
+- `CONTRIBUTING.md` / `SECURITY.md` — 贡献流程与安全策略
+- `LICENSE` — MIT
 
 ## 代码结构
 
@@ -37,12 +44,11 @@ Rust edition 2021，无 workspace，单 crate，无 README。
 
 ## 测试
 
-项目目前**没有测试代码**（无 tests/ 目录、无 #[test]）。验证方式：
+- 单元测试：`cargo test`（纯函数：`human_bytes`、`parse_env_file`、`ApiClient::url` 编码、版本号 `normalize`；以 `#[cfg(test)]` 模块内联在各源文件）
+- 静态检查：`cargo clippy --all-targets -- -D warnings`
+- 真实环境冒烟：在装有 mihomo 的本机上实际运行子命令验证（如 `mihomo-cli status`、`mihomo-cli proxy list`），只读优先
 
-1. `cargo build` 编译通过
-2. 在装有 mihomo 的本机上实际运行子命令验证（如 `mihomo-cli status`、`mihomo-cli proxy list`）
-
-不要自行新增测试脚手架，除非用户明确要求。
+不新增依赖真实 mihomo 实例的测试脚手架（CI 无该环境）；纯逻辑变化优先补内联单元测试。
 
 ## 代码风格与约定
 
@@ -50,7 +56,7 @@ Rust edition 2021，无 workspace，单 crate，无 README。
 - 表格输出统一用 `comfy-table` 的 `UTF8_FULL_CONDENSED` 预设
 - API 路径段一律通过 `ApiClient` 的 `url()` 拼接（保证非 ASCII 名称正确编码），不要手工拼 URL 字符串
 - 涉及本机路径时使用 `$HOME` 下的固定位置（见上文），不要硬编码 `/home/zln`
-- 默认不写注释；解释性中文注释只在行为不显然处保留（现有代码即如此）
+- 注释风格：每个源文件有简短中文模块级 `//!` 文档；函数注释只在行为不显然处添加，不写冗余注释
 
 ## 安全注意事项
 

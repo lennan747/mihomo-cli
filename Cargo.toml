@@ -2,7 +2,14 @@
 name = "mihomo-cli"
 version = "0.1.0"
 edition = "2021"
-description = "CLI to manage a local mihomo (Clash Meta) instance via its REST API"
+authors = ["zhanglinan <lennan747@gmail.com>"]
+license = "MIT"
+description = "管理本机 mihomo (Clash Meta) 实例的命令行工具"
+repository = "https://github.com/lennan747/mihomo-cli"
+keywords = ["mihomo", "clash", "cli", "proxy", "command-line"]
+categories = ["command-line-utilities"]
+readme = "README.md"
+rust-version = "1.80"
 
 [dependencies]
 anyhow = "1"

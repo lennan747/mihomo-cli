@@ -1,3 +1,8 @@
+//! 命令行接口定义（clap derive 模式）。
+//!
+//! 全局参数 `--api` / `--secret` 支持环境变量回退（`MIHOMO_API` / `MIHOMO_SECRET`）。
+//! 新增子命令的流程：在 `Command` 枚举加变体并写中文 doc 注释 → 在 `cmds/` 下建同名模块 → 在 `main.rs` 的 match 中分发。
+
 use clap::{Parser, Subcommand, ValueEnum};
 
 #[derive(Parser)]

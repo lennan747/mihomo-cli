@@ -1,3 +1,8 @@
+//! mihomo REST API 响应的 serde 反序列化模型。
+//!
+//! 字段与 mihomo 外部控制器返回的 JSON 一一对应；API 返回的 camelCase 字段通过
+//! `#[serde(rename)]` 映射为 snake_case。列表/详情字段大量可选，缺失时降级为 `-`。
+
 use serde::Deserialize;
 use std::collections::HashMap;
 

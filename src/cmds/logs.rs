@@ -1,3 +1,7 @@
+//! `logs` 子命令：经 WebSocket 实时跟踪 mihomo 日志，Ctrl-C 退出。
+//!
+//! ws/wss 地址由 `--api` 的 http/https 地址换 scheme 得来，鉴权复用 Bearer secret。
+
 use anyhow::{bail, Context, Result};
 use futures_util::StreamExt;
 use serde_json::Value;

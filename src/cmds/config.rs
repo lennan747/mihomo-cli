@@ -1,3 +1,5 @@
+//! `config` 子命令：热重载 `~/.config/mihomo/config.yaml`（PUT `/configs?force=true`）。
+
 use crate::api::ApiClient;
 use anyhow::{bail, Result};
 use serde_json::json;

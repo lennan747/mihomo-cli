@@ -1,3 +1,5 @@
+//! `group` 子命令：列出策略组、类型、节点数与当前选中。
+
 use crate::api::ApiClient;
 use crate::models::ProxiesResp;
 use anyhow::Result;

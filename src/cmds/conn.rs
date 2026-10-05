@@ -1,3 +1,7 @@
+//! `conn` 子命令：活动连接的查看与关闭。
+//!
+//! 关闭连接影响面大，`close` 必须显式携带 `--all` 才会执行。
+
 use crate::api::ApiClient;
 use crate::cli::ConnAction;
 use crate::cmds::human_bytes;

@@ -1,3 +1,9 @@
+//! `sub` 子命令：订阅地址的查看与设置，以及手动触发订阅更新。
+//!
+//! 订阅更新委托给本机脚本 `~/.local/bin/mihomo-update`（curl 拉取 → sed 修正 →
+//! `mihomo -t` 校验 → 热重载），与每小时执行的 `mihomo-update.timer` 走同一路径，
+//! 保证经 CLI 更新与定时更新行为一致。
+
 use anyhow::{bail, Context, Result};
 use std::path::PathBuf;
 use std::process::Command;

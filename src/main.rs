@@ -1,3 +1,7 @@
+//! mihomo-cli 入口：解析命令行、解析 secret、构造 API 客户端，并分发子命令。
+//!
+//! 各子命令的实现见 `cmds/` 模块；命令行定义见 `cli.rs`。
+
 mod api;
 mod cli;
 mod cmds;
@@ -10,6 +14,7 @@ use cli::{Cli, Command, ConfigAction, GroupAction, RuleAction, SubAction};
 
 #[tokio::main]
 async fn main() {
+    // 统一错误出口：anyhow 链式上下文按 "错误: 原因1: 原因2" 打印，退出码固定 1
     if let Err(e) = run().await {
         eprintln!("错误: {e:#}");
         std::process::exit(1);

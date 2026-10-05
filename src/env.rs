@@ -1,3 +1,8 @@
+//! secret 解析：命令行参数 / `MIHOMO_SECRET` 环境变量（clap 已处理）之外的文件回退。
+//!
+//! 读取 `~/.config/mihomo/mihomo.env`（与 systemd 用户服务共享的环境文件），仅提取
+//! `MIHOMO_SECRET`，不读取、不输出文件中的其他机密内容。
+
 use std::collections::HashMap;
 use std::path::Path;
 
@@ -31,4 +36,45 @@ fn parse_env_file(path: &Path) -> std::io::Result<HashMap<String, String>> {
         }
     }
     Ok(map)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::parse_env_file;
+    use std::collections::HashMap;
+
+    /// 每个测试写独立的临时文件，避免并发测试互相覆盖
+    fn parse(name: &str, content: &str) -> HashMap<String, String> {
+        let file = std::env::temp_dir().join(format!("mihomo-cli-env-test-{name}.env"));
+        std::fs::write(&file, content).unwrap();
+        parse_env_file(&file).unwrap()
+    }
+
+    #[test]
+    fn 解析键值并剥离引号() {
+        let map = parse("quotes", "MIHOMO_SECRET=\"abc123\"\nFOO='bar'\nBAZ=plain\n");
+        assert_eq!(map.get("MIHOMO_SECRET").unwrap(), "abc123");
+        assert_eq!(map.get("FOO").unwrap(), "bar");
+        assert_eq!(map.get("BAZ").unwrap(), "plain");
+    }
+
+    #[test]
+    fn 跳过空行与注释() {
+        let map = parse("comments", "\n# MIHOMO_SECRET=commented\n\nKEY=value\n");
+        assert_eq!(map.len(), 1);
+        assert_eq!(map.get("KEY").unwrap(), "value");
+        assert!(!map.contains_key("MIHOMO_SECRET"));
+    }
+
+    #[test]
+    fn 无等号的行被忽略() {
+        let map = parse("no-eq", "INVALID_LINE\nKEY=value\n");
+        assert_eq!(map.len(), 1);
+    }
+
+    #[test]
+    fn 同名键后者覆盖前者() {
+        let map = parse("override", "KEY=old\nKEY=new\n");
+        assert_eq!(map.get("KEY").unwrap(), "new");
+    }
 }

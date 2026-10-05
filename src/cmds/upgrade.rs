@@ -1,3 +1,5 @@
+//! `upgrade` 子命令：调用 `/upgrade` 端点让 mihomo 自升级内核并原地重启。
+
 use crate::api::ApiClient;
 use crate::models::Version;
 use anyhow::Result;

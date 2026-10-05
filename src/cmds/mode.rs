@@ -1,3 +1,7 @@
+//! `mode` 子命令：查看或切换运行模式（rule/global/direct）。
+//!
+//! 切换经 PATCH `/configs` 热生效，不写配置文件（重启后回落到 config.yaml 的值）。
+
 use crate::api::ApiClient;
 use crate::cli::ModeArg;
 use crate::models::Configs;

@@ -1,3 +1,8 @@
+//! `version` 子命令：显示 mihomo 当前版本，并查询 GitHub 最新 release 判断是否需要升级。
+//!
+//! 查询走两条路：GitHub API（未认证可能被限流）→ releases/latest 页面的 302 跳转目标；
+//! 直连失败时回退本机混合代理端口 7890。
+
 use crate::api::ApiClient;
 use crate::models::Version;
 use anyhow::{Context, Result};
@@ -90,4 +95,30 @@ pub async fn run(client: &ApiClient) -> Result<()> {
         Err(e) => println!("查询最新版本失败: {e}"),
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::normalize;
+
+    #[test]
+    fn 去掉_v_前缀并按段解析() {
+        assert_eq!(normalize("v1.18.9"), vec![1, 18, 9]);
+        assert_eq!(normalize("1.18.9"), vec![1, 18, 9]);
+    }
+
+    #[test]
+    fn 忽略非数字后缀() {
+        // mihomo 的 Alpha 版本号形如 v1.19.2-alpha
+        assert_eq!(normalize("v1.19.2-alpha"), vec![1, 19, 2]);
+    }
+
+    #[test]
+    fn 版本比较() {
+        assert!(normalize("v1.19.0") > normalize("v1.18.9"));
+        assert!(normalize("v1.19.0") >= normalize("v1.19.0"));
+        assert!(normalize("v1.19") < normalize("v1.19.1"));
+        // 同主版本时短版本视为更小：v1.19 < v1.19.0
+        assert!(normalize("v1.19") < normalize("v1.19.0"));
+    }
 }

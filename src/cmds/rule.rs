@@ -1,3 +1,5 @@
+//! `rule` 子命令：列出分流规则（按配置文件中的顺序编号展示）。
+
 use crate::api::ApiClient;
 use crate::models::RulesResp;
 use anyhow::Result;

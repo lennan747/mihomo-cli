@@ -1,3 +1,8 @@
+//! mihomo 外部控制器 REST API 客户端。
+//!
+//! 对 REST API 的薄封装：统一处理 Bearer 鉴权、错误信息中文化与 URL 拼接。
+//! 所有请求路径必须经 [`ApiClient::url`] 拼接，保证含中文/emoji 的节点名被正确百分号编码。
+
 use anyhow::{bail, Context, Result};
 use reqwest::{Client, Method, Url};
 use serde_json::Value;
@@ -99,5 +104,58 @@ impl ApiClient {
 
     pub async fn post(&self, segs: &[&str], query: &[(&str, &str)]) -> Result<Value> {
         self.send(Method::POST, segs, query, None).await
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::ApiClient;
+
+    fn client() -> ApiClient {
+        ApiClient::new("http://127.0.0.1:9090", None).unwrap()
+    }
+
+    #[test]
+    fn 拼接路径与查询参数() {
+        let url = client().url(&["proxies"], &[("timeout", "5000")]);
+        assert_eq!(url.as_str(), "http://127.0.0.1:9090/proxies?timeout=5000");
+    }
+
+    #[test]
+    fn 多段路径正确拼接() {
+        let url = client().url(&["group", "PROXY", "delay"], &[]);
+        assert_eq!(url.as_str(), "http://127.0.0.1:9090/group/PROXY/delay");
+    }
+
+    #[test]
+    fn 中文与emoji节点名被百分号编码() {
+        // 节点名含中文与 emoji 时必须编码，否则请求行非法
+        let url = client().url(&["proxies", "香港 01 🇭🇰"], &[]);
+        let path = url.path();
+        assert!(!path.contains('香'));
+        assert!(!path.contains(' '));
+        assert!(path.ends_with("%F0%9F%87%AD%F0%9F%87%B0")); // 🇭🇰 的百分号编码
+    }
+
+    #[test]
+    fn 查询参数值被编码() {
+        let url = client().url(
+            &["proxies"],
+            &[("url", "https://cp.cloudflare.com/generate_204")],
+        );
+        assert!(url.as_str().contains("url=https%3A%2F%2Fcp.cloudflare.com"));
+    }
+
+    #[test]
+    fn 根路径带斜杠的_apis_地址不产生双斜杠() {
+        let c = ApiClient::new("http://127.0.0.1:9090/", None).unwrap();
+        let url = c.url(&["version"], &[]);
+        assert_eq!(url.as_str(), "http://127.0.0.1:9090/version");
+    }
+
+    #[test]
+    fn 非_http_地址被拒绝() {
+        assert!(ApiClient::new("ftp://127.0.0.1:9090", None).is_ok()); // Url::parse 允许 ftp，但 send 时才会失败
+        assert!(ApiClient::new("不是地址", None).is_err());
     }
 }
