@@ -13,7 +13,7 @@ mihomo-cli 是一个用 Rust 编写的命令行工具，用于管理本机运行
 - 检查：`cargo check`；代码检查可用 `cargo clippy`
 - 依赖：`anyhow`、`clap` 4（derive 模式，支持 env 回退）、`reqwest` 0.12（rustls）、`tokio`、`tokio-tungstenite`（WebSocket 日志流）、`serde`/`serde_json`、`comfy-table`（表格输出）、`futures-util`
 
-Rust edition 2021，无 workspace，单 crate，无 README、无 git 仓库。
+Rust edition 2021，无 workspace，单 crate，无 README。
 
 ## 代码结构
 
