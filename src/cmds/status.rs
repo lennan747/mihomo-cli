@@ -35,7 +35,7 @@ pub async fn run(client: &ApiClient) -> Result<()> {
 
     println!("\n策略组（{} 个）:", groups.len());
     let mut table = Table::new();
-    table.load_preset(UTF8_FULL_CONDENSED);
+    table.load_style(UTF8_FULL_CONDENSED);
     table.set_header(["策略组", "类型", "当前选中"]);
     for g in groups {
         table.add_row([

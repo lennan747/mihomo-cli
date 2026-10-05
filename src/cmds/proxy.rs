@@ -51,7 +51,7 @@ fn find_group<'a>(proxies: &'a ProxiesResp, name: &str) -> Result<&'a Proxy> {
 
 fn print_proxy_table(rows: Vec<[String; 4]>) {
     let mut table = Table::new();
-    table.load_preset(UTF8_FULL_CONDENSED);
+    table.load_style(UTF8_FULL_CONDENSED);
     table.set_header(["节点", "类型", "延迟", "选中"]);
     for r in rows {
         table.add_row(r);
@@ -118,7 +118,7 @@ fn print_test_results(name: &str, results: Vec<(String, Option<u64>)>, footer: O
     fail.sort_by(|a, b| a.0.cmp(&b.0));
 
     let mut table = Table::new();
-    table.load_preset(UTF8_FULL_CONDENSED);
+    table.load_style(UTF8_FULL_CONDENSED);
     table.set_header(["节点", "延迟"]);
     for (node, delay) in ok {
         table.add_row([node.as_str(), &format!("{} ms", delay.unwrap())]);

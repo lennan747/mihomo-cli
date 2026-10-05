@@ -13,7 +13,7 @@ mihomo-cli 是一个用 Rust 编写的命令行工具，用于管理本机运行
 - 检查：`cargo check`；代码检查可用 `cargo clippy`（门禁为 `cargo clippy --all-targets -- -D warnings`）；格式 `cargo fmt --check`
 - 依赖：`anyhow`、`clap` 4（derive 模式，支持 env 回退）、`reqwest` 0.12（rustls）、`tokio`、`tokio-tungstenite`（WebSocket 日志流）、`serde`/`serde_json`、`comfy-table`（表格输出）、`futures-util`
 
-Rust edition 2021，无 workspace，单 crate（`rust-version = 1.80`）。GitHub Actions CI（`.github/workflows/ci.yml`）执行 fmt + clippy + test。
+Rust edition 2021，无 workspace，单 crate（`rust-version = 1.80`）。GitHub Actions：CI（`.github/workflows/ci.yml`，fmt + clippy + test）、发布流水线（`release.yml`，推送 `v*` 标签触发：门禁 → 多平台构建 → SHA256SUMS → GitHub Release → 一键安装验证）、一键安装回归（`install-test.yml`，手动触发）。
 
 ## 项目文档
 
@@ -21,6 +21,7 @@ Rust edition 2021，无 workspace，单 crate（`rust-version = 1.80`）。GitHu
 - `CHANGELOG.md` — 变更日志（Keep a Changelog 格式，发版时更新）
 - `CONTRIBUTING.md` / `SECURITY.md` — 贡献流程与安全策略
 - `LICENSE` — MIT
+- `install.sh` / `install.ps1` / `docs/install-guide.md` — 一键安装脚本与安装指南
 
 ## 代码结构
 

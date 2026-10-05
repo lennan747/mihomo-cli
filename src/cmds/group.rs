@@ -11,7 +11,7 @@ pub async fn run(client: &ApiClient) -> Result<()> {
     groups.sort_by(|a, b| a.name.cmp(&b.name));
 
     let mut table = Table::new();
-    table.load_preset(UTF8_FULL_CONDENSED);
+    table.load_style(UTF8_FULL_CONDENSED);
     table.set_header(["策略组", "类型", "节点数", "当前选中"]);
     for g in groups {
         table.add_row([

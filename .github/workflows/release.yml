@@ -1,0 +1,122 @@
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    name: Gate (fmt + clippy + test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - run: cargo fmt --check
+      - run: cargo clippy --all-targets -- -D warnings
+      - run: cargo test
+
+  build:
+    name: Build ${{ matrix.target }}
+    needs: test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            ext: tar.gz
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            ext: tar.gz
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            ext: zip
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - name: Build release binary
+        run: cargo build --release --locked --target ${{ matrix.target }}
+      - name: Package (tar.gz)
+        if: matrix.ext == 'tar.gz'
+        shell: bash
+        run: |
+          BIN="target/${{ matrix.target }}/release/mihomo-cli"
+          ARCHIVE="mihomo-cli-${{ matrix.target }}.tar.gz"
+          tar -C "$(dirname "$BIN")" -czf "$ARCHIVE" "$(basename "$BIN")"
+          echo "ARCHIVE=$ARCHIVE" >> "$GITHUB_ENV"
+      - name: Package (zip)
+        if: matrix.ext == 'zip'
+        shell: bash
+        run: |
+          BIN="target/${{ matrix.target }}/release/mihomo-cli.exe"
+          ARCHIVE="mihomo-cli-${{ matrix.target }}.zip"
+          (cd "$(dirname "$BIN")" && 7z a "$OLDPWD/$ARCHIVE" "$(basename "$BIN")")
+          echo "ARCHIVE=$ARCHIVE" >> "$GITHUB_ENV"
+      - name: Upload asset
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.target }}
+          path: ${{ env.ARCHIVE }}
+
+  release:
+    name: Publish GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+      - name: Compute SHA256SUMS
+        run: |
+          (cd artifacts && sha256sum *.tar.gz *.zip > SHA256SUMS)
+          cat artifacts/SHA256SUMS
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/*.tar.gz
+            artifacts/*.zip
+            artifacts/SHA256SUMS
+          generate_release_notes: true
+
+  verify:
+    name: One-click install (${{ matrix.os }})
+    needs: release
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: install.sh one-line install and verify
+        if: runner.os == 'Linux'
+        env:
+          MIHOMO_CLI_VERSION: ${{ github.ref_name }}
+          MIHOMO_CLI_INSTALL_DIR: ${{ runner.temp }}/mihomo-cli-bin
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/lennan747/mihomo-cli/master/install.sh | sh
+          out="$("$MIHOMO_CLI_INSTALL_DIR/mihomo-cli" --version)"
+          case "$out" in mihomo-cli\ *) ;; *) echo "unexpected --version output: $out" >&2; exit 1 ;; esac
+          echo "verified: $out"
+      - name: install.ps1 one-line install and verify
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          MIHOMO_CLI_VERSION: ${{ github.ref_name }}
+          MIHOMO_CLI_INSTALL_DIR: ${{ runner.temp }}\mihomo-cli-bin
+          MIHOMO_CLI_NO_PATH: "1"
+        run: |
+          irm https://raw.githubusercontent.com/lennan747/mihomo-cli/master/install.ps1 | iex
+          $out = & "$env:MIHOMO_CLI_INSTALL_DIR\mihomo-cli.exe" --version
+          if ($out -notmatch '^mihomo-cli ') { throw "unexpected --version output: $out" }
+          Write-Host "verified: $out"

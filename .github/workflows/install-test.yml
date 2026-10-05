@@ -1,0 +1,35 @@
+name: install-test
+
+# 手动触发的一键安装回归检查（release 流程已内置 verify job；
+# GITHUB_TOKEN 创建的 release 不会触发本仓库其他 workflow，故不监听 release 事件）。
+on:
+  workflow_dispatch:
+
+jobs:
+  windows-one-click-install:
+    name: install.ps1 (windows-latest)
+    runs-on: windows-latest
+    steps:
+      - name: Run one-line install and verify
+        shell: pwsh
+        env:
+          MIHOMO_CLI_INSTALL_DIR: ${{ runner.temp }}\mihomo-cli-bin
+          MIHOMO_CLI_NO_PATH: "1"
+        run: |
+          irm https://raw.githubusercontent.com/lennan747/mihomo-cli/master/install.ps1 | iex
+          $out = & "$env:MIHOMO_CLI_INSTALL_DIR\mihomo-cli.exe" --version
+          if ($out -notmatch '^mihomo-cli ') { throw "unexpected --version output: $out" }
+          Write-Host "verified: $out"
+
+  unix-one-click-install:
+    name: install.sh (ubuntu-latest)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run one-line install and verify
+        env:
+          MIHOMO_CLI_INSTALL_DIR: ${{ runner.temp }}/mihomo-cli-bin
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/lennan747/mihomo-cli/master/install.sh | sh
+          out="$("$MIHOMO_CLI_INSTALL_DIR/mihomo-cli" --version)"
+          case "$out" in mihomo-cli\ *) ;; *) echo "unexpected --version output: $out" >&2; exit 1 ;; esac
+          echo "verified: $out"

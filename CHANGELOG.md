@@ -4,6 +4,19 @@
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
+## [0.1.1] - 2026-10-05
+
+### 修复
+
+- 适配 comfy-table 8（`load_preset` → `load_style`），解除 dependabot 升级阻塞；本仓库所有表格输出不变。
+
+### 新增
+
+- 一键安装：`install.sh`（Linux/macOS）与 `install.ps1`（Windows x86_64），从 GitHub Releases 拉取二进制并强制 SHA256 校验；支持 `MIHOMO_CLI_VERSION` / `MIHOMO_CLI_INSTALL_DIR` / `MIHOMO_CLI_NO_PATH` 环境变量。
+- 发布流水线（`release.yml`）：推送 `v*` 标签触发，门禁（fmt+clippy+test）→ 多平台构建（Linux x86_64 / macOS arm64 / Windows x86_64）→ 生成 `SHA256SUMS` 并发布 GitHub Release → 一键安装端到端验证。
+- 手动回归工作流 `install-test.yml`（`workflow_dispatch` 触发一键安装检查）。
+- `docs/install-guide.md`：面向 AI Agent 的安装与验证指南。
+
 ## [0.1.0] - 2026-10-05
 
 ### 新增

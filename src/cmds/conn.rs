@@ -52,7 +52,7 @@ async fn list(client: &ApiClient, limit: usize) -> Result<()> {
     );
 
     let mut table = Table::new();
-    table.load_preset(UTF8_FULL_CONDENSED);
+    table.load_style(UTF8_FULL_CONDENSED);
     table.set_header(["目标", "网络", "规则", "流量", "链路"]);
     for c in conns.iter().take(limit) {
         table.add_row(conn_row(c));

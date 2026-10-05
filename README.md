@@ -1,5 +1,6 @@
 # mihomo-cli
 
+[![GitHub Release](https://img.shields.io/github/v/release/lennan747/mihomo-cli)](https://github.com/lennan747/mihomo-cli/releases)
 [![CI](https://img.shields.io/github/actions/workflow/status/lennan747/mihomo-cli/ci.yml?branch=master&label=ci)](https://github.com/lennan747/mihomo-cli/actions)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
@@ -41,7 +42,29 @@
 
 ## 安装
 
-> 要求：Linux + systemd 用户服务运行 mihomo；Rust >= 1.80（源码安装）。
+> 要求：Linux / macOS arm64 / Windows x86_64（`service`/`sub` 子命令依赖 systemd 用户服务与订阅脚本，仅 Linux 可用；其余命令跨平台）；源码安装要求 Rust >= 1.80；一键安装支持 SHA256 校验。
+
+### 一键安装（推荐）
+
+从 GitHub Releases 拉取最新二进制，自动校验 SHA256。
+
+Linux / macOS：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/lennan747/mihomo-cli/master/install.sh | sh
+```
+
+- 安装到 `~/.local/bin/mihomo-cli`（可用 `MIHOMO_CLI_INSTALL_DIR` 覆盖）。
+- 指定版本：`MIHOMO_CLI_VERSION=v0.1.1 curl -fsSL https://raw.githubusercontent.com/lennan747/mihomo-cli/master/install.sh | sh`。
+
+Windows（PowerShell 5.1+，x86_64）：
+
+```powershell
+irm https://raw.githubusercontent.com/lennan747/mihomo-cli/master/install.ps1 | iex
+```
+
+- 安装到 `%LOCALAPPDATA%\mihomo-cli\bin\mihomo-cli.exe`，并自动加入用户 PATH（**新开终端生效**）。
+- 可用环境变量覆盖：`MIHOMO_CLI_VERSION`（指定版本）、`MIHOMO_CLI_INSTALL_DIR`（安装目录）、`MIHOMO_CLI_NO_PATH=1`（跳过 PATH 写入）。
 
 ### cargo 安装
 
@@ -58,7 +81,7 @@ cargo build --release --locked
 install -m 0755 target/release/mihomo-cli ~/.local/bin/
 ```
 
-本工具强耦合于本机的 mihomo 部署环境（见[运行时环境](#运行时环境)），大多数命令需要 mihomo 已在本机运行。
+安装后运行 `mihomo-cli status` 验证（见[快速开始](#快速开始)）；面向 AI Agent 的完整分步说明见 [docs/install-guide.md](docs/install-guide.md)。本工具强耦合于本机的 mihomo 部署环境（见[运行时环境](#运行时环境)），大多数命令需要 mihomo 已在本机运行。
 
 ## 快速开始
 
