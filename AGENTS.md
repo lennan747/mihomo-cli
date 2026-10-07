@@ -11,7 +11,7 @@ mihomo-cli 是一个用 Rust 编写的命令行工具，用于管理本机运行
 - 构建：`cargo build`（release 版本用 `cargo build --release`）
 - 运行：`cargo run -- <子命令>`，或使用已编译的二进制（`target/release/mihomo-cli`）
 - 检查：`cargo check`；代码检查可用 `cargo clippy`（门禁为 `cargo clippy --all-targets -- -D warnings`）；格式 `cargo fmt --check`
-- 依赖：`anyhow`、`clap` 4（derive 模式，支持 env 回退）、`reqwest` 0.12（rustls）、`tokio`、`tokio-tungstenite`（WebSocket 日志流）、`serde`/`serde_json`、`comfy-table`（表格输出）、`futures-util`
+- 依赖：`anyhow`、`clap` 4（derive 模式，支持 env 回退）、`reqwest` 0.12（rustls）、`tokio`、`tokio-tungstenite`（WebSocket 日志流）、`serde`/`serde_json`、`futures-util`、`unicode-width` + `terminal_size`（终端渲染）；`self-upgrade` 另用 `sha2`/`tar`/`flate2`/`zip`/`self-replace`
 
 Rust edition 2021，无 workspace，单 crate（`rust-version = 1.80`）。GitHub Actions：CI（`.github/workflows/ci.yml`，fmt + clippy + test）、发布流水线（`release.yml`，推送 `v*` 标签触发：门禁 → 多平台构建 → SHA256SUMS → GitHub Release → 一键安装验证）、一键安装回归（`install-test.yml`，手动触发）。
 
@@ -31,6 +31,7 @@ Rust edition 2021，无 workspace，单 crate（`rust-version = 1.80`）。GitHu
 - `src/env.rs` — secret 解析：命令行/环境变量优先，否则读 `~/.config/mihomo/mihomo.env`
 - `src/github.rs` — GitHub Release 查询与版本号比较的共享工具（GitHub API → 302 跳转，直连失败回退本机 7890 代理；`normalize_version`），供 `version` 与 `self-upgrade` 复用
 - `src/models.rs` — API 响应的 serde 模型（Version/Configs/Proxy/Rule/Connection 等）
+- `src/ui.rs` — 终端渲染工具箱：圆角框（`Box`）+ 表格 dashboard（`table_dashboard`）+ 键值面板（`kv_panel`）+ 状态条（`status_bar`）；可见宽度按 CJK=2 计算、ANSI 不计宽，颜色仅在 TTY 且未设 `NO_COLOR` 时启用。**所有表格/框线输出必须走此模块**，参考 qq-triage 的样式
 - `src/cmds/` — 每个子命令一个模块：`status`、`proxy`（list/test/select/update）、`group`、`rule`、`conn`、`logs`（WebSocket 实时日志）、`mode`、`config`（热重载）、`service`（systemd 用户服务）、`sub`（订阅管理）、`version`（查 GitHub 最新 release）、`upgrade`（调 `/upgrade` 自升级内核）、`self_upgrade`（从 GitHub Releases 下载并 SHA256 校验后原地替换 CLI 自身）；`cmds/mod.rs` 提供共享工具函数如 `human_bytes`
 
 新增子命令的惯例：在 `cli.rs` 的 `Command` 枚举加变体并写中文 doc 注释 → 在 `cmds/` 下建同名模块 → 在 `main.rs` 的 match 中分发。
@@ -46,7 +47,7 @@ Rust edition 2021，无 workspace，单 crate（`rust-version = 1.80`）。GitHu
 
 ## 测试
 
-- 单元测试：`cargo test`（纯函数：`human_bytes`、`parse_env_file`、`ApiClient::url` 编码、版本号 `normalize_version`、`self_upgrade` 的平台映射/资产名/SHA256SUMS 解析；以 `#[cfg(test)]` 模块内联在各源文件）
+- 单元测试：`cargo test`（纯函数：`human_bytes`、`parse_env_file`、`ApiClient::url` 编码、版本号 `normalize_version`、`self_upgrade` 的平台映射/资产名/SHA256SUMS 解析、`ui` 的可见宽度/截断/框对齐；以 `#[cfg(test)]` 模块内联在各源文件）
 - 静态检查：`cargo clippy --all-targets -- -D warnings`
 - 真实环境冒烟：在装有 mihomo 的本机上实际运行子命令验证（如 `mihomo-cli status`、`mihomo-cli proxy list`），只读优先
 
@@ -55,7 +56,7 @@ Rust edition 2021，无 workspace，单 crate（`rust-version = 1.80`）。GitHu
 ## 代码风格与约定
 
 - 错误处理统一用 `anyhow`：底层错误加 `.context()` 中文上下文，业务错误用 `bail!`，面向用户的消息一律中文
-- 表格输出统一用 `comfy-table` 的 `UTF8_FULL_CONDENSED` 预设
+- 表格/框线输出统一走 `crate::ui`（`table_dashboard` / `kv_panel` / `status_bar`）：面板标题与表头用英文，单元格可含 ANSI 色码（对齐按可见宽度计算）；不要在命令模块里手工拼框线或自行计算宽度
 - API 路径段一律通过 `ApiClient` 的 `url()` 拼接（保证非 ASCII 名称正确编码），不要手工拼 URL 字符串
 - 涉及本机路径时使用 `$HOME` 下的固定位置（见上文），不要硬编码 `/home/zln`
 - 注释风格：每个源文件有简短中文模块级 `//!` 文档；函数注释只在行为不显然处添加，不写冗余注释

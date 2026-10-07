@@ -8,6 +8,7 @@ mod cmds;
 mod env;
 mod github;
 mod models;
+mod ui;
 
 use anyhow::Result;
 use clap::Parser;

@@ -2,6 +2,7 @@
 
 use crate::api::ApiClient;
 use crate::models::Version;
+use crate::ui;
 use anyhow::Result;
 
 pub async fn run(client: &ApiClient) -> Result<()> {
@@ -25,9 +26,15 @@ pub async fn run(client: &ApiClient) -> Result<()> {
         if let Ok(v) = client.get(&["version"], &[]).await {
             if let Ok(after) = serde_json::from_value::<Version>(v) {
                 if after.version != before.version {
-                    println!("升级完成: {} -> {}", before.version, after.version);
+                    println!(
+                        "{}",
+                        ui::green(&format!(
+                            "✓ 升级完成: {} -> {}",
+                            before.version, after.version
+                        ))
+                    );
                 } else {
-                    println!("已是最新版本 ({})", after.version);
+                    println!("{}", ui::dim(&format!("已是最新版本 ({})", after.version)));
                 }
                 return Ok(());
             }

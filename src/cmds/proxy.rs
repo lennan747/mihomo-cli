@@ -5,9 +5,10 @@
 
 use crate::api::ApiClient;
 use crate::cli::ProxyAction;
+use crate::cmds::histogram;
 use crate::models::{ProxiesResp, Proxy};
+use crate::ui::{self, Column};
 use anyhow::{bail, Result};
-use comfy_table::{presets::UTF8_FULL_CONDENSED, Table};
 use serde_json::json;
 
 const TEST_URL: &str = "https://cp.cloudflare.com/generate_204";
@@ -18,6 +19,24 @@ pub async fn run(client: &ApiClient, action: ProxyAction) -> Result<()> {
         ProxyAction::Test { group, timeout } => test(client, group.as_deref(), timeout).await,
         ProxyAction::Select { group, name } => select(client, &group, &name).await,
         ProxyAction::Update => crate::cmds::sub::run(),
+    }
+}
+
+/// 延迟单元格：<200ms 绿 / <500ms 黄 / 其余红，无数据灰
+fn delay_cell(delay: Option<u64>) -> String {
+    match delay {
+        Some(d) if d < 200 => ui::green(&format!("{d} ms")),
+        Some(d) if d < 500 => ui::yellow(&format!("{d} ms")),
+        Some(d) => ui::red(&format!("{d} ms")),
+        None => ui::dim("-"),
+    }
+}
+
+fn selected_cell(is_selected: bool) -> String {
+    if is_selected {
+        ui::bold_green("★")
+    } else {
+        String::new()
     }
 }
 
@@ -49,14 +68,13 @@ fn find_group<'a>(proxies: &'a ProxiesResp, name: &str) -> Result<&'a Proxy> {
     }
 }
 
-fn print_proxy_table(rows: Vec<[String; 4]>) {
-    let mut table = Table::new();
-    table.load_style(UTF8_FULL_CONDENSED);
-    table.set_header(["节点", "类型", "延迟", "选中"]);
-    for r in rows {
-        table.add_row(r);
-    }
-    println!("{table}");
+fn proxy_columns() -> [Column; 4] {
+    [
+        Column::flex("name", 28),
+        Column::new("type", 12),
+        Column::new("delay", 10),
+        Column::new("sel", 3),
+    ]
 }
 
 async fn list(client: &ApiClient, group: Option<&str>) -> Result<()> {
@@ -64,72 +82,98 @@ async fn list(client: &ApiClient, group: Option<&str>) -> Result<()> {
     match group {
         Some(name) => {
             let g = find_group(&proxies, name)?;
-            println!(
-                "策略组 {name}（{} 个节点）:",
-                g.all.as_ref().map_or(0, Vec::len)
+            let nodes = g.all.as_deref().unwrap_or(&[]);
+            let rows: Vec<Vec<String>> = nodes
+                .iter()
+                .map(|node| {
+                    let (ptype, delay) = match proxies.proxies.get(node) {
+                        Some(p) => (ui::dim(&p.ptype), delay_cell(p.last_delay())),
+                        None => (ui::dim("?"), ui::dim("-")),
+                    };
+                    vec![
+                        node.clone(),
+                        ptype,
+                        delay,
+                        selected_cell(g.now.as_deref() == Some(node.as_str())),
+                    ]
+                })
+                .collect();
+            let summary = histogram(
+                nodes
+                    .iter()
+                    .filter_map(|n| proxies.proxies.get(n))
+                    .map(|p| p.ptype.as_str()),
             );
-            let mut rows = Vec::new();
-            for node in g.all.as_deref().unwrap_or(&[]) {
-                let p = proxies.proxies.get(node);
-                let (ptype, delay) = match p {
-                    Some(p) => (
-                        p.ptype.clone(),
-                        p.last_delay()
-                            .map_or_else(|| "-".into(), |d| format!("{d} ms")),
-                    ),
-                    None => ("?".into(), "-".into()),
-                };
-                let selected = if g.now.as_deref() == Some(node.as_str()) {
-                    "★"
-                } else {
-                    ""
-                };
-                rows.push([node.clone(), ptype, delay, selected.into()]);
-            }
-            print_proxy_table(rows);
+            ui::table_dashboard(
+                "Proxies",
+                &format!("group={name} · nodes={}", nodes.len()),
+                &proxy_columns(),
+                &rows,
+                Some(&summary),
+            );
         }
         None => {
             let mut nodes: Vec<&Proxy> =
                 proxies.proxies.values().filter(|p| !p.is_group()).collect();
             nodes.sort_by(|a, b| a.name.cmp(&b.name));
-            println!("全部节点（{} 个）:", nodes.len());
-            let rows = nodes
-                .into_iter()
+            let rows: Vec<Vec<String>> = nodes
+                .iter()
                 .map(|p| {
-                    [
+                    vec![
                         p.name.clone(),
-                        p.ptype.clone(),
-                        p.last_delay()
-                            .map_or_else(|| "-".into(), |d| format!("{d} ms")),
+                        ui::dim(&p.ptype),
+                        delay_cell(p.last_delay()),
                         String::new(),
                     ]
                 })
                 .collect();
-            print_proxy_table(rows);
+            let summary = histogram(nodes.iter().map(|p| p.ptype.as_str()));
+            ui::table_dashboard(
+                "Proxies",
+                &format!("scope=all · nodes={}", nodes.len()),
+                &proxy_columns(),
+                &rows,
+                Some(&summary),
+            );
         }
     }
     Ok(())
 }
 
-fn print_test_results(name: &str, results: Vec<(String, Option<u64>)>, footer: Option<String>) {
-    let mut ok: Vec<_> = results.iter().filter(|(_, d)| d.is_some()).collect();
+fn print_test_results(
+    scope: &str,
+    timeout: u64,
+    results: Vec<(String, Option<u64>)>,
+    total: usize,
+) {
+    let mut ok: Vec<&(String, Option<u64>)> = results.iter().filter(|(_, d)| d.is_some()).collect();
     ok.sort_by_key(|(_, d)| d.unwrap());
-    let mut fail: Vec<_> = results.iter().filter(|(_, d)| d.is_none()).collect();
+    let mut fail: Vec<&(String, Option<u64>)> =
+        results.iter().filter(|(_, d)| d.is_none()).collect();
     fail.sort_by(|a, b| a.0.cmp(&b.0));
 
-    let mut table = Table::new();
-    table.load_style(UTF8_FULL_CONDENSED);
-    table.set_header(["节点", "延迟"]);
-    for (node, delay) in ok {
-        table.add_row([node.as_str(), &format!("{} ms", delay.unwrap())]);
-    }
-    for (node, _) in fail {
-        table.add_row([node.as_str(), "超时"]);
-    }
-    println!("{name}:\n{table}");
-    if let Some(f) = footer {
-        println!("{f}");
-    }
+    let rows: Vec<Vec<String>> = ok
+        .iter()
+        .map(|(node, delay)| vec![node.clone(), delay_cell(*delay)])
+        .chain(
+            fail.iter()
+                .map(|(node, _)| vec![node.clone(), ui::dim("timeout")]),
+        )
+        .collect();
+
+    let title_right = format!(
+        "{scope} · timeout={timeout} ms · shown={}/{total}",
+        ok.len()
+    );
+    let summary = format!(
+        "{} responded={}  {} timeout={}",
+        ui::green("●"),
+        ok.len(),
+        ui::red("○"),
+        fail.len()
+    );
+    let columns = [Column::flex("name", 28), Column::new("delay", 12)];
+    ui::table_dashboard("Delay test", &title_right, &columns, &rows, Some(&summary));
 }
 
 async fn test(client: &ApiClient, group: Option<&str>, timeout: u64) -> Result<()> {
@@ -137,7 +181,8 @@ async fn test(client: &ApiClient, group: Option<&str>, timeout: u64) -> Result<(
     match group {
         Some(name) => {
             let proxies = fetch_proxies(client).await?;
-            find_group(&proxies, name)?;
+            let g = find_group(&proxies, name)?;
+            let total = g.all.as_ref().map_or(0, Vec::len);
             // /group/{name}/delay 返回扁平 map: {节点名: 延迟毫秒数}，无响应的节点不出现
             let result = client
                 .get(
@@ -148,18 +193,7 @@ async fn test(client: &ApiClient, group: Option<&str>, timeout: u64) -> Result<(
             let map = result.as_object().cloned().unwrap_or_default();
             let results: Vec<(String, Option<u64>)> =
                 map.into_iter().map(|(k, v)| (k, v.as_u64())).collect();
-            let total = proxies.proxies[name].all.as_ref().map_or(0, Vec::len);
-            let footer = (results.len() < total).then(|| {
-                format!(
-                    "（{}/{total} 个节点有响应，其余超时或不可用）",
-                    results.len()
-                )
-            });
-            print_test_results(
-                &format!("策略组 {name} 延迟测试（超时 {timeout} ms）"),
-                results,
-                footer,
-            );
+            print_test_results(&format!("group={name}"), timeout, results, total);
         }
         None => {
             let proxies = fetch_proxies(client).await?;
@@ -171,9 +205,13 @@ async fn test(client: &ApiClient, group: Option<&str>, timeout: u64) -> Result<(
                 .collect();
 
             println!(
-                "全部 {} 个节点延迟测试（超时 {timeout} ms）...",
-                nodes.len()
+                "{}",
+                ui::dim(&format!(
+                    "正在并发测试 {} 个节点（超时 {timeout} ms）...",
+                    nodes.len()
+                ))
             );
+            let total = nodes.len();
             let mut set = tokio::task::JoinSet::new();
             for node in nodes {
                 let c = client.clone();
@@ -193,11 +231,7 @@ async fn test(client: &ApiClient, group: Option<&str>, timeout: u64) -> Result<(
             while let Some(res) = set.join_next().await {
                 results.push(res?);
             }
-            print_test_results(
-                &format!("全部节点延迟测试（超时 {timeout} ms）"),
-                results,
-                None,
-            );
+            print_test_results("scope=all", timeout, results, total);
         }
     }
     Ok(())
@@ -213,6 +247,6 @@ async fn select(client: &ApiClient, group: &str, name: &str) -> Result<()> {
     client
         .put(&["proxies", group], &[], json!({ "name": name }))
         .await?;
-    println!("已将 {group} 切换为: {name}");
+    println!("{}", ui::green(&format!("✓ 已将 {group} 切换为: {name}")));
     Ok(())
 }

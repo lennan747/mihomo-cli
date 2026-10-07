@@ -5,6 +5,7 @@
 use crate::api::ApiClient;
 use crate::cli::ServiceAction;
 use crate::models::Version;
+use crate::ui;
 use anyhow::{bail, Context, Result};
 use std::process::Command;
 
@@ -29,7 +30,10 @@ pub async fn run(client: &ApiClient, action: ServiceAction) -> Result<()> {
                 tokio::time::sleep(std::time::Duration::from_millis(500)).await;
                 if let Ok(v) = client.get(&["version"], &[]).await {
                     if let Ok(ver) = serde_json::from_value::<Version>(v) {
-                        println!("mihomo 已恢复运行 ({})", ver.version);
+                        println!(
+                            "{}",
+                            ui::green(&format!("✓ mihomo 已恢复运行 ({})", ver.version))
+                        );
                         return Ok(());
                     }
                 }

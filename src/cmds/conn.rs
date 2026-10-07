@@ -6,8 +6,8 @@ use crate::api::ApiClient;
 use crate::cli::ConnAction;
 use crate::cmds::human_bytes;
 use crate::models::{Connection, ConnectionsResp};
+use crate::ui::{self, Column};
 use anyhow::{bail, Result};
-use comfy_table::{presets::UTF8_FULL_CONDENSED, Table};
 
 pub async fn run(client: &ApiClient, action: ConnAction) -> Result<()> {
     match action {
@@ -31,36 +31,47 @@ fn conn_row(c: &Connection) -> [String; 5] {
         (None, Some(t)) => t.clone(),
         (None, None) => "-".into(),
     };
-    let chain = c.chains.join(" -> ");
     [
         target,
-        net,
-        c.rule.clone().unwrap_or_else(|| "-".into()),
+        ui::dim(&net),
+        ui::dim(c.rule.as_deref().unwrap_or("-")),
         format!("↓{} ↑{}", human_bytes(c.download), human_bytes(c.upload)),
-        chain,
+        ui::dim(&c.chains.join(" -> ")),
     ]
 }
 
 async fn list(client: &ApiClient, limit: usize) -> Result<()> {
     let resp: ConnectionsResp = serde_json::from_value(client.get(&["connections"], &[]).await?)?;
     let conns = resp.connections.unwrap_or_default();
-    println!(
-        "活动连接: {} 条（累计 ↓{} ↑{}）",
+
+    let rows: Vec<Vec<String>> = conns
+        .iter()
+        .take(limit)
+        .map(|c| conn_row(c).to_vec())
+        .collect();
+    let columns = [
+        Column::flex("target", 24),
+        Column::new("net", 9),
+        Column::new("rule", 10),
+        Column::new("traffic", 18),
+        Column::new("chain", 18),
+    ];
+    let title_right = format!(
+        "shown={} / total={} · ↓{} ↑{}",
+        rows.len(),
         conns.len(),
         human_bytes(resp.download_total),
         human_bytes(resp.upload_total)
     );
-
-    let mut table = Table::new();
-    table.load_style(UTF8_FULL_CONDENSED);
-    table.set_header(["目标", "网络", "规则", "流量", "链路"]);
-    for c in conns.iter().take(limit) {
-        table.add_row(conn_row(c));
-    }
-    println!("{table}");
-    if conns.len() > limit {
-        println!("（仅显示前 {limit} 条，共 {} 条）", conns.len());
-    }
+    let hint = (conns.len() > limit)
+        .then(|| ui::dim(&format!("showing first {limit} of {}", conns.len())));
+    ui::table_dashboard(
+        "Connections",
+        &title_right,
+        &columns,
+        &rows,
+        hint.as_deref(),
+    );
     Ok(())
 }
 
@@ -69,6 +80,6 @@ async fn close(client: &ApiClient, all: bool) -> Result<()> {
         bail!("关闭连接影响范围较大，请明确指定 --all 关闭全部活动连接");
     }
     client.delete(&["connections"]).await?;
-    println!("已关闭全部活动连接");
+    println!("{}", ui::green("✓ 已关闭全部活动连接"));
     Ok(())
 }

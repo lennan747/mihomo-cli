@@ -4,6 +4,7 @@
 //! 安全：下载后强制校验发布资产对应的 SHA256SUMS，校验不通过即中止，不提供绕过选项。
 
 use crate::github::{latest_release_tag, normalize_version};
+use crate::ui;
 use anyhow::{bail, Context, Result};
 use std::io::Read;
 use std::path::{Path, PathBuf};
@@ -211,9 +212,9 @@ pub async fn run(check: bool, version: Option<String>, force: bool) -> Result<()
     })?;
 
     if is_newer {
-        println!("升级完成: v{current} -> {tag}");
+        println!("{}", ui::green(&format!("✓ 升级完成: v{current} -> {tag}")));
     } else {
-        println!("重装完成: {tag}");
+        println!("{}", ui::green(&format!("✓ 重装完成: {tag}")));
     }
     println!("重新运行 `mihomo-cli --version` 确认生效");
     Ok(())

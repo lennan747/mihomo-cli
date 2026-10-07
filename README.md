@@ -15,6 +15,7 @@
 - **热操作**：运行模式切换、配置热重载，均不重启服务。
 - **服务与订阅**：systemd 用户服务重启/状态查询；订阅地址管理与手动更新（与每小时定时任务走同一脚本）。
 - **版本与升级**：对照 GitHub 最新 release 检查更新，调用 `/upgrade` 端点在线升级内核；`self-upgrade` 从 GitHub Releases 下载并 SHA256 校验后原地升级 CLI 自身。
+- **终端样式**：统一的圆角框 dashboard（标题内嵌顶边、底栏汇总），按可见宽度对齐（中文/emoji 不错位），TTY 自适应颜色。
 
 ## 目录
 
@@ -115,7 +116,18 @@ mihomo-cli sub update
 | `--api <url>` | mihomo 外部控制器地址，默认 `http://127.0.0.1:9090`；环境变量 `MIHOMO_API` |
 | `-s, --secret <secret>` | API 鉴权密钥；环境变量 `MIHOMO_SECRET`；均未提供时读 `~/.config/mihomo/mihomo.env`（见[配置与凭据安全](#配置与凭据安全)） |
 
-**输出样式**：表格统一使用 `UTF8_FULL_CONDENSED` 预设；延迟测试结果按延迟升序排列，超时节点排在末尾；流量字节数按 1024 进制转为人类可读。
+**输出样式**：表格统一为圆角框 dashboard（`╭── 标题 · 元信息 ──╮` / `├─┤` 分隔 / `╰──╯` 底边），面板标题与表头用英文，底栏为统计或提示；列宽按可见宽度对齐（中文按 2 列、几何符号按 1 列，ANSI 色码不计），超长内容截断补 `…`。延迟测试结果按延迟升序排列，超时节点排在末尾并显示 `timeout`；流量字节数按 1024 进制转为人类可读。
+
+颜色仅当 stdout 为终端且未设置 `NO_COLOR` 时启用（延迟绿/黄/红、选中 `★` 绿、类型与规则灰）；管道或重定向到文件时自动降级为无色，框线布局不变。
+
+```
+╭───────────────── Status · mihomo v1.19.32 · meta=true ─────────────────╮
+│ mode                                                              rule │
+│ log-level                                                         info │
+│ mixed-port                                                        7890 │
+│ redir-port                                                        7892 │
+╰────────────────────────────────────────────────────────────────────────╯
+```
 
 ---
 
@@ -448,6 +460,7 @@ src/api.rs       ApiClient：REST API 薄封装（鉴权/编码/错误中文化�
 src/env.rs       secret 解析（命令行/环境变量/mihomo.env 文件回退）
 src/github.rs    GitHub Release 查询与版本号比较（version / self-upgrade 复用）
 src/models.rs    API 响应的 serde 模型
+src/ui.rs        终端渲染工具箱（圆角框 / 表格 dashboard / 可见宽度对齐 / TTY 自适应颜色）
 src/cmds/        每个子命令一个模块（status/proxy/group/rule/conn/logs/mode/config/service/sub/version/upgrade/self_upgrade）
 ```
 

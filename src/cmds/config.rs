@@ -1,6 +1,7 @@
 //! `config` 子命令：热重载 `~/.config/mihomo/config.yaml`（PUT `/configs?force=true`）。
 
 use crate::api::ApiClient;
+use crate::ui;
 use anyhow::{bail, Result};
 use serde_json::json;
 
@@ -13,6 +14,9 @@ pub async fn run(client: &ApiClient) -> Result<()> {
     client
         .put(&["configs"], &[("force", "true")], json!({ "path": path }))
         .await?;
-    println!("已热重载配置: {}", path.display());
+    println!(
+        "{}",
+        ui::green(&format!("✓ 已热重载配置: {}", path.display()))
+    );
     Ok(())
 }

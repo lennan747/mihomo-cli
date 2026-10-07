@@ -8,6 +8,8 @@ use anyhow::{bail, Context, Result};
 use std::path::PathBuf;
 use std::process::Command;
 
+use crate::ui;
+
 fn url_file() -> PathBuf {
     let home = std::env::var_os("HOME").unwrap_or_default();
     PathBuf::from(home).join(".config/mihomo/subscription.url")
@@ -65,7 +67,7 @@ pub fn set_url(u: &str) -> Result<()> {
     let file = url_file();
     std::fs::write(&file, format!("{u}\n"))
         .with_context(|| format!("写入 {} 失败", file.display()))?;
-    println!("订阅地址已保存: {u}");
+    println!("{}", ui::green(&format!("✓ 订阅地址已保存: {u}")));
     println!(
         "提示: 每小时的 mihomo-update.timer 也会使用此地址；立即更新请运行 `mihomo-cli sub update`"
     );

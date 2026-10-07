@@ -1,5 +1,8 @@
 //! 子命令实现：每个子命令一个模块（与 `cli.rs` 的枚举变体同名），本模块只放共享工具。
 
+use crate::ui;
+use std::collections::BTreeMap;
+
 pub mod config;
 pub mod conn;
 pub mod group;
@@ -28,6 +31,22 @@ pub fn human_bytes(n: u64) -> String {
     } else {
         format!("{size:.1} {}", UNITS[unit])
     }
+}
+
+/// 统计各取值出现次数，格式化为 `key=count`（按次数降序、同次数按名称升序），键名 dim 着色。
+/// 用于表格底栏汇总，如 `Selector=12  Fallback=1`。
+pub fn histogram<'a, I: Iterator<Item = &'a str>>(items: I) -> String {
+    let mut counts: BTreeMap<&str, usize> = BTreeMap::new();
+    for k in items {
+        *counts.entry(k).or_insert(0) += 1;
+    }
+    let mut pairs: Vec<(&str, usize)> = counts.into_iter().collect();
+    pairs.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| a.0.cmp(b.0)));
+    pairs
+        .iter()
+        .map(|(k, n)| format!("{}={n}", ui::dim(k)))
+        .collect::<Vec<_>>()
+        .join("  ")
 }
 
 #[cfg(test)]

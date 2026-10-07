@@ -6,6 +6,10 @@
 
 ## [Unreleased]
 
+### 变更
+
+- 输出样式重写（参考 qq-triage）：`status`/`group`/`proxy`/`rule`/`conn`/`version`/`mode` 等改用统一的圆角框 dashboard（标题内嵌顶边、`├─┤` 分隔、底栏汇总），面板标题与表头改用英文；新增 `src/ui.rs` 渲染工具箱，按可见宽度对齐（中文按 2 列、ANSI 不计宽），超长内容截断补 `…`；引入 TTY 自适应颜色（`NO_COLOR` 可关闭，管道/重定向自动无色）。移除 `comfy-table` 依赖，新增 `unicode-width` / `terminal_size`。
+
 ### 新增
 
 - `self-upgrade [--check] [--version <vX.Y.Z>] [--force]`：升级 mihomo-cli 客户端自身（区别于升级内核的 `upgrade`）。从 GitHub Releases 下载对应平台资产，强制校验 `SHA256SUMS` 后原地替换当前可执行文件；直连失败自动回退本机 7890 代理。支持 Linux x86_64 / macOS arm64 / Windows x86_64。

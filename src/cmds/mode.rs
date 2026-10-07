@@ -5,20 +5,36 @@
 use crate::api::ApiClient;
 use crate::cli::ModeArg;
 use crate::models::Configs;
+use crate::ui;
 use anyhow::Result;
 use serde_json::json;
+
+/// 运行模式着色：direct 红 / global 黄 / rule 绿
+fn mode_colored(mode: &str) -> String {
+    match mode {
+        "global" => ui::yellow(mode),
+        "direct" => ui::red(mode),
+        _ => ui::green(mode),
+    }
+}
 
 pub async fn run(client: &ApiClient, mode: Option<ModeArg>) -> Result<()> {
     match mode {
         None => {
             let configs: Configs = serde_json::from_value(client.get(&["configs"], &[]).await?)?;
-            println!("当前模式: {}", configs.mode);
+            ui::status_bar(&[
+                ui::bold("mihomo-cli mode"),
+                format!("{} {}", ui::dim("current ="), mode_colored(&configs.mode)),
+            ]);
         }
         Some(m) => {
             client
                 .patch(&["configs"], json!({ "mode": m.as_str() }))
                 .await?;
-            println!("已切换模式: {}", m.as_str());
+            println!(
+                "{}",
+                ui::green(&format!("✓ 已切换模式: {}", mode_colored(m.as_str())))
+            );
         }
     }
     Ok(())
