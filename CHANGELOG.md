@@ -6,6 +6,10 @@
 
 ## [Unreleased]
 
+### 新增
+
+- `proxy list` / `proxy test` / `proxy select` 的策略组名与节点名支持**唯一子串匹配**（大小写不敏感），如 `proxy list 国外` → `🌐 国外流量`、`proxy select 国外 新加坡`；匹配不唯一或不存在时报错并列出候选，不会误切。mihomo API 本身不提供代理/组 ID，只能用名称寻址。
+
 ### 修复
 
 - 输出被下游提前关闭（如 `mihomo-cli rule list | head`）不再 panic：Unix 下启动时恢复 `SIGPIPE` 默认处置，进程静默退出（退出码 141），取代原来 `println!` 因 `EPIPE` panic 并打印 backtrace 的行为。

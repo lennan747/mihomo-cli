@@ -68,6 +68,49 @@ fn find_group<'a>(proxies: &'a ProxiesResp, name: &str) -> Result<&'a Proxy> {
     }
 }
 
+/// 把用户输入解析为唯一名称：先精确匹配，再「唯一子串」匹配。
+///
+/// mihomo 的代理/组没有 ID，只能用名称寻址；名称多带 emoji 前缀（`🌐 国外流量`），
+/// 纯前缀匹配对 `国外` 这类输入无效，故用子串。歧义或无匹配时报错并给出候选。
+/// （大小写不敏感，便于用 `ai` 匹配 `🤖 AI平台`。）
+fn resolve<'a, I>(query: &str, candidates: I, what: &str) -> Result<String>
+where
+    I: IntoIterator<Item = &'a str>,
+{
+    if query.is_empty() {
+        bail!("{what}名不能为空");
+    }
+    let cands: Vec<&str> = candidates.into_iter().collect();
+    if cands.contains(&query) {
+        return Ok(query.to_string());
+    }
+    let q = query.to_lowercase();
+    let mut hits: Vec<&str> = cands
+        .iter()
+        .copied()
+        .filter(|c| c.to_lowercase().contains(&q))
+        .collect();
+    hits.sort_unstable();
+    match hits.len() {
+        0 => bail!("未找到包含 {query} 的{what}"),
+        1 => Ok(hits[0].to_string()),
+        _ => {
+            let shown: Vec<&str> = hits.iter().take(8).copied().collect();
+            let more = if hits.len() > shown.len() { " …" } else { "" };
+            bail!(
+                "{query} 匹配到多个{what}，请写得更具体：{}{more}",
+                shown.join(" / ")
+            )
+        }
+    }
+}
+
+/// 解析策略组名（对全部策略组做唯一子串匹配）
+fn resolve_group(proxies: &ProxiesResp, query: &str) -> Result<String> {
+    let groups = group_names(proxies);
+    resolve(query, groups.iter().map(String::as_str), "策略组")
+}
+
 fn proxy_columns() -> [Column; 4] {
     [
         Column::flex("name", 28),
@@ -81,7 +124,8 @@ async fn list(client: &ApiClient, group: Option<&str>) -> Result<()> {
     let proxies = fetch_proxies(client).await?;
     match group {
         Some(name) => {
-            let g = find_group(&proxies, name)?;
+            let name = resolve_group(&proxies, name)?;
+            let g = find_group(&proxies, &name)?;
             let nodes = g.all.as_deref().unwrap_or(&[]);
             let rows: Vec<Vec<String>> = nodes
                 .iter()
@@ -181,12 +225,13 @@ async fn test(client: &ApiClient, group: Option<&str>, timeout: u64) -> Result<(
     match group {
         Some(name) => {
             let proxies = fetch_proxies(client).await?;
-            let g = find_group(&proxies, name)?;
+            let name = resolve_group(&proxies, name)?;
+            let g = find_group(&proxies, &name)?;
             let total = g.all.as_ref().map_or(0, Vec::len);
             // /group/{name}/delay 返回扁平 map: {节点名: 延迟毫秒数}，无响应的节点不出现
             let result = client
                 .get(
-                    &["group", name, "delay"],
+                    &["group", name.as_str(), "delay"],
                     &[("timeout", &t), ("url", TEST_URL)],
                 )
                 .await?;
@@ -239,14 +284,52 @@ async fn test(client: &ApiClient, group: Option<&str>, timeout: u64) -> Result<(
 
 async fn select(client: &ApiClient, group: &str, name: &str) -> Result<()> {
     let proxies = fetch_proxies(client).await?;
-    let g = find_group(&proxies, group)?;
+    let group = resolve_group(&proxies, group)?;
+    let g = find_group(&proxies, &group)?;
     let members = g.all.as_deref().unwrap_or(&[]);
-    if !members.iter().any(|m| m == name) {
-        bail!("节点 {name} 不在策略组 {group} 中（该组有 {} 个节点，用 `mihomo-cli proxy list {group}` 查看）", members.len());
-    }
+    let name = resolve(name, members.iter().map(String::as_str), "节点")?;
     client
-        .put(&["proxies", group], &[], json!({ "name": name }))
+        .put(&["proxies", group.as_str()], &[], json!({ "name": name }))
         .await?;
     println!("{}", ui::green(&format!("✓ 已将 {group} 切换为: {name}")));
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::resolve;
+
+    const GROUPS: [&str; 5] = [
+        "GLOBAL",
+        "🌐 国外流量",
+        "🎬 国际流媒体",
+        "🎬 大陆流媒体国际版",
+        "🤖 AI平台",
+    ];
+
+    #[test]
+    fn 精确匹配优先() {
+        assert_eq!(resolve("GLOBAL", GROUPS, "策略组").unwrap(), "GLOBAL");
+    }
+
+    #[test]
+    fn 唯一子串匹配() {
+        // 名称带 emoji 前缀，纯前缀匹配对「国外」无效，子串可命中
+        assert_eq!(resolve("国外", GROUPS, "策略组").unwrap(), "🌐 国外流量");
+        // 大小写不敏感
+        assert_eq!(resolve("ai", GROUPS, "策略组").unwrap(), "🤖 AI平台");
+    }
+
+    #[test]
+    fn 歧义时报错并列出候选() {
+        let err = resolve("流媒体", GROUPS, "策略组").unwrap_err().to_string();
+        assert!(err.contains("匹配到多个"), "{err}");
+        assert!(err.contains("大陆流媒体国际版"), "{err}");
+    }
+
+    #[test]
+    fn 无匹配与空输入报错() {
+        assert!(resolve("不存在", GROUPS, "策略组").is_err());
+        assert!(resolve("", GROUPS, "策略组").is_err());
+    }
 }

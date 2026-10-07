@@ -32,7 +32,7 @@ Rust edition 2021，无 workspace，单 crate（`rust-version = 1.80`）。GitHu
 - `src/github.rs` — GitHub Release 查询与版本号比较的共享工具（GitHub API → 302 跳转，直连失败回退本机 7890 代理；`normalize_version`），供 `version` 与 `self-upgrade` 复用
 - `src/models.rs` — API 响应的 serde 模型（Version/Configs/Proxy/Rule/Connection 等）
 - `src/ui.rs` — 终端渲染工具箱：圆角框（`Box`）+ 表格 dashboard（`table_dashboard`）+ 键值面板（`kv_panel`）+ 状态条（`status_bar`）；可见宽度按 CJK=2 计算、ANSI 不计宽，颜色仅在 TTY 且未设 `NO_COLOR` 时启用。**所有表格/框线输出必须走此模块**，参考 qq-triage 的样式
-- `src/cmds/` — 每个子命令一个模块：`status`、`proxy`（list/test/select/update）、`group`、`rule`、`conn`、`logs`（WebSocket 实时日志）、`mode`、`config`（热重载）、`service`（systemd 用户服务）、`sub`（订阅管理）、`version`（查 GitHub 最新 release）、`upgrade`（调 `/upgrade` 自升级内核）、`self_upgrade`（从 GitHub Releases 下载并 SHA256 校验后原地替换 CLI 自身）；`cmds/mod.rs` 提供共享工具函数如 `human_bytes`
+- `src/cmds/` — 每个子命令一个模块：`status`、`proxy`（list/test/select/update；策略组名与节点名支持唯一子串匹配，见 `proxy::resolve`）、`group`、`rule`、`conn`、`logs`（WebSocket 实时日志）、`mode`、`config`（热重载）、`service`（systemd 用户服务）、`sub`（订阅管理）、`version`（查 GitHub 最新 release）、`upgrade`（调 `/upgrade` 自升级内核）、`self_upgrade`（从 GitHub Releases 下载并 SHA256 校验后原地替换 CLI 自身）；`cmds/mod.rs` 提供共享工具函数如 `human_bytes`
 
 新增子命令的惯例：在 `cli.rs` 的 `Command` 枚举加变体并写中文 doc 注释 → 在 `cmds/` 下建同名模块 → 在 `main.rs` 的 match 中分发。
 

@@ -114,10 +114,13 @@ pub enum Command {
 #[derive(Subcommand)]
 pub enum ProxyAction {
     /// 列出节点；指定策略组名则列出该组节点，否则列出全部节点
+    ///
+    /// 组名支持唯一子串匹配（如 `国外` → `🌐 国外流量`），匹配不唯一时会列出候选
     List { group: Option<String> },
 
     /// 延迟测试并排序；指定策略组名只测该组，否则测全部节点
     Test {
+        /// 策略组名（支持唯一子串匹配）
         group: Option<String>,
         /// 超时时间（毫秒）
         #[arg(long, default_value_t = 5000)]
@@ -125,6 +128,8 @@ pub enum ProxyAction {
     },
 
     /// 切换策略组的选中节点
+    ///
+    /// 组名与节点名均支持唯一子串匹配（如 `国外` / `香港`），匹配不唯一时会列出候选
     Select { group: String, name: String },
 
     /// 从订阅拉取最新节点并热更新（同 sub update）

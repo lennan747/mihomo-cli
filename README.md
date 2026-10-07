@@ -158,7 +158,11 @@ mihomo-cli proxy list [group]
 ```bash
 mihomo-cli proxy list          # 全部节点（含类型与最近一次延迟）
 mihomo-cli proxy list PROXY    # 某策略组的节点，★ 标记当前选中
+mihomo-cli proxy list 国外     # 组名支持唯一子串匹配（→ 🌐 国外流量）
 ```
+
+> mihomo 的代理/策略组**没有 ID，只能用名称寻址**；名称多带 emoji 前缀（如 `🌐 国外流量`），
+> 因此组名与节点名支持**唯一子串匹配**（大小写不敏感），匹配不唯一时会列出候选让你写得更具体。
 
 #### proxy test
 
@@ -175,9 +179,10 @@ mihomo-cli proxy test [group] [--timeout <毫秒>]
 ```bash
 mihomo-cli proxy test
 mihomo-cli proxy test PROXY --timeout 3000
+mihomo-cli proxy test 国外 --timeout 3000      # 组名同样支持唯一子串匹配
 ```
 
-> 按组测试时无响应的节点不会出现在结果里，末尾会提示 `（x/y 个节点有响应，其余超时或不可用）`。
+> 按组测试时无响应的节点不会出现在结果里，末尾汇总会给出 `responded` / `timeout` 计数。
 
 #### proxy select
 
@@ -189,9 +194,11 @@ mihomo-cli proxy select <group> <name>
 
 ```bash
 mihomo-cli proxy select PROXY "香港 01"
+mihomo-cli proxy select 国外 新加坡             # 组名/节点名均支持唯一子串匹配
 ```
 
-> 切换前会校验：策略组存在且目标节点在该组内，否则报错并提示可用的查看命令。
+> 组名与节点名都支持唯一子串匹配；匹配不唯一（如 `香港`）或不存在时会报错并列出候选，**不会**误切。
+> 匹配到的节点必然是目标组的成员，因此无需再手动核对。
 
 #### proxy update
 
