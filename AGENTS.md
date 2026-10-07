@@ -11,7 +11,7 @@ mihomo-cli 是一个用 Rust 编写的命令行工具，用于管理本机运行
 - 构建：`cargo build`（release 版本用 `cargo build --release`）
 - 运行：`cargo run -- <子命令>`，或使用已编译的二进制（`target/release/mihomo-cli`）
 - 检查：`cargo check`；代码检查可用 `cargo clippy`（门禁为 `cargo clippy --all-targets -- -D warnings`）；格式 `cargo fmt --check`
-- 依赖：`anyhow`、`clap` 4（derive 模式，支持 env 回退）、`reqwest` 0.12（rustls）、`tokio`、`tokio-tungstenite`（WebSocket 日志流）、`serde`/`serde_json`、`futures-util`、`unicode-width` + `terminal_size`（终端渲染）；`self-upgrade` 另用 `sha2`/`tar`/`flate2`/`zip`/`self-replace`
+- 依赖：`anyhow`、`clap` 4（derive 模式，支持 env 回退）、`reqwest` 0.12（rustls）、`tokio`、`tokio-tungstenite`（WebSocket 日志流）、`serde`/`serde_json`、`futures-util`、`unicode-width` + `terminal_size`（终端渲染）、`libc`（仅 Unix，启动时恢复 `SIGPIPE` 默认处置以避免管道提前关闭时 panic）；`self-upgrade` 另用 `sha2`/`tar`/`flate2`/`zip`/`self-replace`
 
 Rust edition 2021，无 workspace，单 crate（`rust-version = 1.80`）。GitHub Actions：CI（`.github/workflows/ci.yml`，fmt + clippy + test）、发布流水线（`release.yml`，推送 `v*` 标签触发：门禁 → 多平台构建 → SHA256SUMS → GitHub Release → 一键安装验证）、一键安装回归（`install-test.yml`，手动触发）。
 

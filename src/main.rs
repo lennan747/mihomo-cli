@@ -14,8 +14,25 @@ use anyhow::Result;
 use clap::Parser;
 use cli::{Cli, Command, ConfigAction, GroupAction, RuleAction, SubAction};
 
+/// 恢复 `SIGPIPE` 的默认处置。
+///
+/// Rust 启动时会忽略 `SIGPIPE`，于是输出被下游提前关闭（如 `mihomo-cli rule list | head`）时
+/// `println!` 会因 `EPIPE` panic 并打印 backtrace。恢复默认后进程会像普通 Unix 程序一样被
+/// `SIGPIPE` 静默终止，`head`/`less` 等下游提前退出不再产生噪音。
+#[cfg(unix)]
+fn restore_sigpipe() {
+    // SAFETY: 仅在进程启动阶段把 SIGPIPE 的处置设为默认值，不改动其他信号。
+    unsafe {
+        libc::signal(libc::SIGPIPE, libc::SIG_DFL);
+    }
+}
+
+#[cfg(not(unix))]
+fn restore_sigpipe() {}
+
 #[tokio::main]
 async fn main() {
+    restore_sigpipe();
     // 统一错误出口：anyhow 链式上下文按 "错误: 原因1: 原因2" 打印，退出码固定 1
     if let Err(e) = run().await {
         eprintln!("错误: {e:#}");

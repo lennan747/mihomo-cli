@@ -4,6 +4,12 @@
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
+## [Unreleased]
+
+### 修复
+
+- 输出被下游提前关闭（如 `mihomo-cli rule list | head`）不再 panic：Unix 下启动时恢复 `SIGPIPE` 默认处置，进程静默退出（退出码 141），取代原来 `println!` 因 `EPIPE` panic 并打印 backtrace 的行为。
+
 ## [0.2.0] - 2026-10-07
 
 ### 变更
