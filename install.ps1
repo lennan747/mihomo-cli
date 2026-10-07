@@ -4,7 +4,7 @@
 #   irm https://raw.githubusercontent.com/lennan747/mihomo-cli/master/install.ps1 | iex
 #
 # 环境变量：
-#   MIHOMO_CLI_VERSION       指定版本（默认 latest，如 v0.2.0）
+#   MIHOMO_CLI_VERSION       指定版本（默认 latest，如 v0.3.0）
 #   MIHOMO_CLI_INSTALL_DIR   安装目录（默认 $env:LOCALAPPDATA\mihomo-cli\bin）
 #   MIHOMO_CLI_NO_PATH       设任意非空值可跳过 PATH 写入（CI 用）
 #

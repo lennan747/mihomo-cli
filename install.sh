@@ -6,7 +6,7 @@
 #   curl -fsSL https://raw.githubusercontent.com/lennan747/mihomo-cli/master/install.sh | sh
 #
 # 环境变量：
-#   MIHOMO_CLI_VERSION       指定版本（默认 latest，如 v0.2.0）
+#   MIHOMO_CLI_VERSION       指定版本（默认 latest，如 v0.3.0）
 #   MIHOMO_CLI_INSTALL_DIR   安装目录（默认 $HOME/.local/bin）
 #
 # 安全：下载后强制校验发布资产对应的 SHA256SUMS。

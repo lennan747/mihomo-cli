@@ -57,7 +57,7 @@ curl -fsSL https://raw.githubusercontent.com/lennan747/mihomo-cli/master/install
 ```
 
 - 安装到 `~/.local/bin/mihomo-cli`（可用 `MIHOMO_CLI_INSTALL_DIR` 覆盖）。
-- 指定版本：`MIHOMO_CLI_VERSION=v0.2.0 curl -fsSL https://raw.githubusercontent.com/lennan747/mihomo-cli/master/install.sh | sh`。
+- 指定版本：`MIHOMO_CLI_VERSION=v0.3.0 curl -fsSL https://raw.githubusercontent.com/lennan747/mihomo-cli/master/install.sh | sh`。
 
 Windows（PowerShell 5.1+，x86_64）：
 
@@ -400,7 +400,7 @@ mihomo-cli self-upgrade [--check] [--version <vX.Y.Z>] [--force]
 ```bash
 mihomo-cli self-upgrade              # 升级到最新版
 mihomo-cli self-upgrade --check      # 只看是否有新版本
-mihomo-cli self-upgrade --version v0.2.0
+mihomo-cli self-upgrade --version v0.3.0
 ```
 
 > - 支持平台：Linux x86_64、macOS arm64、Windows x86_64（与发布资产一致）；其他平台会明确报错。
