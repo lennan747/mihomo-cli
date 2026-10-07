@@ -2,7 +2,7 @@
 
 ## 项目概述
 
-mihomo-cli 是一个用 Rust 编写的命令行工具，用于管理本机运行的 mihomo (Clash Meta) 代理内核。它通过 mihomo 的外部控制器 REST API（默认 `http://127.0.0.1:9090`）与 `systemctl --user` 用户服务进行交互，提供状态查看、节点切换、延迟测试、日志跟踪、订阅更新、内核升级等功能。
+mihomo-cli 是一个用 Rust 编写的命令行工具，用于管理本机运行的 mihomo (Clash Meta) 代理内核。它通过 mihomo 的外部控制器 REST API（默认 `http://127.0.0.1:9090`）与 `systemctl --user` 用户服务进行交互，提供状态查看、节点切换、延迟测试、日志跟踪、订阅更新、内核升级、客户端自升级等功能。
 
 所有用户界面文案、注释和错误提示均为**简体中文**。
 
@@ -29,8 +29,9 @@ Rust edition 2021，无 workspace，单 crate（`rust-version = 1.80`）。GitHu
 - `src/cli.rs` — clap 派生宏定义的全部子命令/参数；全局参数 `--api`（env `MIHOMO_API`，默认 `http://127.0.0.1:9090`）和 `-s/--secret`（env `MIHOMO_SECRET`）
 - `src/api.rs` — `ApiClient`：对 REST API 的薄封装（get/put/patch/delete/post），统一处理 Bearer 鉴权、URL 路径段百分号编码（节点名含中文和 emoji）、错误信息中文化
 - `src/env.rs` — secret 解析：命令行/环境变量优先，否则读 `~/.config/mihomo/mihomo.env`
+- `src/github.rs` — GitHub Release 查询与版本号比较的共享工具（GitHub API → 302 跳转，直连失败回退本机 7890 代理；`normalize_version`），供 `version` 与 `self-upgrade` 复用
 - `src/models.rs` — API 响应的 serde 模型（Version/Configs/Proxy/Rule/Connection 等）
-- `src/cmds/` — 每个子命令一个模块：`status`、`proxy`（list/test/select/update）、`group`、`rule`、`conn`、`logs`（WebSocket 实时日志）、`mode`、`config`（热重载）、`service`（systemd 用户服务）、`sub`（订阅管理）、`version`（查 GitHub 最新 release，直连失败回退本机 7890 代理）、`upgrade`（调 `/upgrade` 自升级）；`cmds/mod.rs` 提供共享工具函数如 `human_bytes`
+- `src/cmds/` — 每个子命令一个模块：`status`、`proxy`（list/test/select/update）、`group`、`rule`、`conn`、`logs`（WebSocket 实时日志）、`mode`、`config`（热重载）、`service`（systemd 用户服务）、`sub`（订阅管理）、`version`（查 GitHub 最新 release）、`upgrade`（调 `/upgrade` 自升级内核）、`self_upgrade`（从 GitHub Releases 下载并 SHA256 校验后原地替换 CLI 自身）；`cmds/mod.rs` 提供共享工具函数如 `human_bytes`
 
 新增子命令的惯例：在 `cli.rs` 的 `Command` 枚举加变体并写中文 doc 注释 → 在 `cmds/` 下建同名模块 → 在 `main.rs` 的 match 中分发。
 
@@ -45,7 +46,7 @@ Rust edition 2021，无 workspace，单 crate（`rust-version = 1.80`）。GitHu
 
 ## 测试
 
-- 单元测试：`cargo test`（纯函数：`human_bytes`、`parse_env_file`、`ApiClient::url` 编码、版本号 `normalize`；以 `#[cfg(test)]` 模块内联在各源文件）
+- 单元测试：`cargo test`（纯函数：`human_bytes`、`parse_env_file`、`ApiClient::url` 编码、版本号 `normalize_version`、`self_upgrade` 的平台映射/资产名/SHA256SUMS 解析；以 `#[cfg(test)]` 模块内联在各源文件）
 - 静态检查：`cargo clippy --all-targets -- -D warnings`
 - 真实环境冒烟：在装有 mihomo 的本机上实际运行子命令验证（如 `mihomo-cli status`、`mihomo-cli proxy list`），只读优先
 

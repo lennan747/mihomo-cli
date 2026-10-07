@@ -7,6 +7,7 @@ pub mod logs;
 pub mod mode;
 pub mod proxy;
 pub mod rule;
+pub mod self_upgrade;
 pub mod service;
 pub mod status;
 pub mod sub;

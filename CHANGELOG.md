@@ -4,6 +4,12 @@
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
+## [Unreleased]
+
+### 新增
+
+- `self-upgrade [--check] [--version <vX.Y.Z>] [--force]`：升级 mihomo-cli 客户端自身（区别于升级内核的 `upgrade`）。从 GitHub Releases 下载对应平台资产，强制校验 `SHA256SUMS` 后原地替换当前可执行文件；直连失败自动回退本机 7890 代理。支持 Linux x86_64 / macOS arm64 / Windows x86_64。
+
 ## [0.1.1] - 2026-10-05
 
 ### 修复

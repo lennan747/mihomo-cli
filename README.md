@@ -14,7 +14,7 @@
 - **实时日志**：WebSocket 跟踪 mihomo 日志流，按级别过滤，Ctrl-C 退出。
 - **热操作**：运行模式切换、配置热重载，均不重启服务。
 - **服务与订阅**：systemd 用户服务重启/状态查询；订阅地址管理与手动更新（与每小时定时任务走同一脚本）。
-- **版本与升级**：对照 GitHub 最新 release 检查更新，调用 `/upgrade` 端点在线升级内核。
+- **版本与升级**：对照 GitHub 最新 release 检查更新，调用 `/upgrade` 端点在线升级内核；`self-upgrade` 从 GitHub Releases 下载并 SHA256 校验后原地升级 CLI 自身。
 
 ## 目录
 
@@ -34,6 +34,7 @@
   - [sub](#sub)
   - [version](#version)
   - [upgrade](#upgrade)
+  - [self-upgrade](#self-upgrade)
 - [运行时环境](#运行时环境)
 - [配置与凭据安全](#配置与凭据安全)
 - [退出码](#退出码)
@@ -363,6 +364,33 @@ mihomo-cli upgrade
 
 ---
 
+### self-upgrade
+
+升级 **mihomo-cli 客户端自身**（区别于 `upgrade` 升级 mihomo 内核）。从 GitHub Releases 下载对应平台资产，校验 SHA256 后原地替换当前可执行文件。
+
+```
+mihomo-cli self-upgrade [--check] [--version <vX.Y.Z>] [--force]
+```
+
+| 选项 | 必填 | 说明 |
+|---|---|---|
+| `--check` | 否 | 仅检查是否有新版本，不下载安装 |
+| `--version <vX.Y.Z>` | 否 | 指定要安装的版本，默认最新 |
+| `--force` | 否 | 已是最新也强制重新下载安装 |
+
+```bash
+mihomo-cli self-upgrade              # 升级到最新版
+mihomo-cli self-upgrade --check      # 只看是否有新版本
+mihomo-cli self-upgrade --version v0.2.0
+```
+
+> - 支持平台：Linux x86_64、macOS arm64、Windows x86_64（与发布资产一致）；其他平台会明确报错。
+> - 下载后强制校验 `SHA256SUMS`，校验不通过即中止；直连 GitHub 失败时自动回退本机 7890 代理。
+> - 无写权限（如安装在 `/usr/local/bin`）时会报错，请用 `sudo` 重试或按[安装](#安装)重新安装。
+> - 替换的是当前正在运行的可执行文件本身；升级后重新运行 `mihomo-cli --version` 确认生效。
+
+---
+
 ## 运行时环境
 
 本工具强耦合于本机的 mihomo 部署环境（大多数命令离开此环境无法真正执行）：
@@ -418,8 +446,9 @@ src/main.rs      入口：解析 CLI、分发子命令
 src/cli.rs       clap 派生宏定义的全部子命令/参数
 src/api.rs       ApiClient：REST API 薄封装（鉴权/编码/错误中文化）
 src/env.rs       secret 解析（命令行/环境变量/mihomo.env 文件回退）
+src/github.rs    GitHub Release 查询与版本号比较（version / self-upgrade 复用）
 src/models.rs    API 响应的 serde 模型
-src/cmds/        每个子命令一个模块（status/proxy/group/rule/conn/logs/mode/config/service/sub/version/upgrade）
+src/cmds/        每个子命令一个模块（status/proxy/group/rule/conn/logs/mode/config/service/sub/version/upgrade/self_upgrade）
 ```
 
 新增子命令的惯例：在 `cli.rs` 的 `Command` 枚举加变体并写中文 doc 注释 → 在 `cmds/` 下建同名模块 → 在 `main.rs` 的 match 中分发。

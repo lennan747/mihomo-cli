@@ -6,6 +6,7 @@ mod api;
 mod cli;
 mod cmds;
 mod env;
+mod github;
 mod models;
 
 use anyhow::Result;
@@ -49,5 +50,10 @@ async fn run() -> Result<()> {
         },
         Command::Version => cmds::version::run(&client).await,
         Command::Upgrade => cmds::upgrade::run(&client).await,
+        Command::SelfUpgrade {
+            check,
+            version,
+            force,
+        } => cmds::self_upgrade::run(check, version, force).await,
     }
 }

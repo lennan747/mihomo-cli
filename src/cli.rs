@@ -94,6 +94,21 @@ pub enum Command {
 
     /// 在线升级 mihomo 内核（调用 /upgrade 自升级端点）
     Upgrade,
+
+    /// 升级 mihomo-cli 客户端自身（从 GitHub Releases 下载并校验 SHA256 后原地替换）
+    SelfUpgrade {
+        /// 仅检查是否有新版本，不下载安装
+        #[arg(long)]
+        check: bool,
+
+        /// 指定要安装的版本，如 v0.2.0（默认最新）
+        #[arg(long)]
+        version: Option<String>,
+
+        /// 已是最新也强制重新下载安装
+        #[arg(long)]
+        force: bool,
+    },
 }
 
 #[derive(Subcommand)]
