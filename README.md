@@ -57,7 +57,7 @@ curl -fsSL https://raw.githubusercontent.com/lennan747/mihomo-cli/master/install
 ```
 
 - 安装到 `~/.local/bin/mihomo-cli`（可用 `MIHOMO_CLI_INSTALL_DIR` 覆盖）。
-- 指定版本：`MIHOMO_CLI_VERSION=v0.1.1 curl -fsSL https://raw.githubusercontent.com/lennan747/mihomo-cli/master/install.sh | sh`。
+- 指定版本：`MIHOMO_CLI_VERSION=v0.2.0 curl -fsSL https://raw.githubusercontent.com/lennan747/mihomo-cli/master/install.sh | sh`。
 
 Windows（PowerShell 5.1+，x86_64）：
 
