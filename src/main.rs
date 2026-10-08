@@ -63,7 +63,7 @@ async fn run() -> Result<()> {
         Command::Service { action } => cmds::service::run(&client, action).await,
         Command::Sub { action } => match action {
             SubAction::Update => cmds::sub::run(),
-            SubAction::Url => cmds::sub::url(),
+            SubAction::Url { reveal } => cmds::sub::url(reveal),
             SubAction::SetUrl { url } => cmds::sub::set_url(&url),
         },
         Command::Version => cmds::version::run(&client).await,

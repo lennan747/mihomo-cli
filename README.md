@@ -341,8 +341,10 @@ mihomo-cli sub update
 
 查看当前订阅地址：优先 `~/.config/mihomo/subscription.url`，其次从更新脚本中提取默认值。
 
+输出默认脱敏（保留域名与路径前缀、隐藏 token）；需完整回显时用 `--reveal`（勿贴入公开渠道）。
+
 ```
-mihomo-cli sub url
+mihomo-cli sub url [--reveal]
 ```
 
 #### sub set-url
@@ -357,7 +359,7 @@ mihomo-cli sub set-url <URL>
 mihomo-cli sub set-url https://example.com/subscribe?token=xxx
 ```
 
-> 仅接受 `http://` / `https://` URL；订阅地址含个人 token，注意不要泄露。
+> 仅接受 `http://` / `https://` URL；订阅地址含个人 token，保存确认输出同样脱敏，注意不要泄露。订阅文件权限固定为 0600。
 
 ---
 
@@ -430,6 +432,7 @@ API 鉴权密钥按以下顺序解析：
 安全约定：
 
 - `MIHOMO_SECRET` 绝不会出现在日志或表格输出中。
+- `sub url` / `sub set-url` 输出订阅地址时默认脱敏（隐藏 token），需完整查看时用 `sub url --reveal`；`~/.config/mihomo/subscription.url` 文件权限固定为 0600。
 - `~/.config/mihomo/` 下的文件多为机密或敏感数据（`mihomo.env` 含鉴权密钥、`subscription.url` 含订阅 token），请勿提交到仓库或分享给他人。
 - 订阅更新脚本使用 `mihomo -t` 校验通过后才替换 `config.yaml`，CLI 的 `sub` 相关命令不绕过这一安全步骤。
 

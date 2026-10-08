@@ -185,8 +185,12 @@ pub enum SubAction {
     /// 拉取订阅并热更新配置
     Update,
 
-    /// 查看当前订阅地址
-    Url,
+    /// 查看当前订阅地址（默认脱敏显示，隐藏 token）
+    Url {
+        /// 完整回显订阅地址（含 token，勿贴入公开渠道）
+        #[arg(long)]
+        reveal: bool,
+    },
 
     /// 设置订阅地址（写入 ~/.config/mihomo/subscription.url，每小时定时更新同样生效）
     SetUrl { url: String },
