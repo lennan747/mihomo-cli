@@ -4,6 +4,17 @@
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
+## [0.3.1] - 2026-10-08
+
+### 修复
+
+- `proxy list` / `proxy test` 不指定策略组时漏掉全部 proxy-providers 节点：provider 节点不在 `/proxies` 顶层（只有被策略组 `use:` 引用后经组的 `all` 数组暴露），scope=all 现合并 `/providers/proxies` 中各 provider 的节点（跳过内置 Compatible provider 副本），按名称去重排序；providers 端点不可用时退回顶层节点，与旧行为一致。
+
+### 安全
+
+- `sub url` / `sub set-url` 不再明文回显订阅地址：默认脱敏为 `https://example.com/sub/****` 并附全长（保留域名与路径前缀便于辨认），需完整查看时用新增的 `sub url --reveal` 显式回显。
+- `sub set-url` 写入的 `~/.config/mihomo/subscription.url` 权限由 `0666 & ~umask`（常见 umask 下实测 0664）收紧为 0600，与 `mihomo.env` 的凭据约定一致；已存在的文件再次写入时同样补正权限。
+
 ## [0.3.0] - 2026-10-07
 
 ### 新增
