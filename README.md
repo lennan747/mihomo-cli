@@ -149,14 +149,14 @@ mihomo-cli status
 
 #### proxy list
 
-列出节点；指定策略组名则列出该组节点（标记当前选中 `★`），否则列出全部节点。
+列出节点；指定策略组名则列出该组节点（标记当前选中 `★`），否则列出全部节点（含 proxy-providers 订阅节点，与顶层节点按名称去重合并）。
 
 ```
 mihomo-cli proxy list [group]
 ```
 
 ```bash
-mihomo-cli proxy list          # 全部节点（含类型与最近一次延迟）
+mihomo-cli proxy list          # 全部节点（含 proxy-providers 节点、类型与最近一次延迟）
 mihomo-cli proxy list PROXY    # 某策略组的节点，★ 标记当前选中
 mihomo-cli proxy list 国外     # 组名支持唯一子串匹配（→ 🌐 国外流量）
 ```

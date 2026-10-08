@@ -6,10 +6,11 @@
 use crate::api::ApiClient;
 use crate::cli::ProxyAction;
 use crate::cmds::histogram;
-use crate::models::{ProxiesResp, Proxy};
+use crate::models::{ProvidersResp, ProxiesResp, Proxy};
 use crate::ui::{self, Column};
 use anyhow::{bail, Result};
 use serde_json::json;
+use std::collections::BTreeMap;
 
 const TEST_URL: &str = "https://cp.cloudflare.com/generate_204";
 
@@ -44,6 +45,37 @@ async fn fetch_proxies(client: &ApiClient) -> Result<ProxiesResp> {
     Ok(serde_json::from_value(
         client.get(&["proxies"], &[]).await?,
     )?)
+}
+
+/// 拉取 proxy-providers 节点：provider 节点不出现在 /proxies 顶层，
+/// 只有被策略组 `use:` 引用后经组的 all 数组暴露，scope=all 需主动遍历 /providers/proxies。
+async fn fetch_provider_proxies(client: &ApiClient) -> Result<Vec<Proxy>> {
+    let v = client.get(&["providers", "proxies"], &[]).await?;
+    let resp: ProvidersResp = serde_json::from_value(v)?;
+    Ok(resp
+        .providers
+        .into_values()
+        // 内置的 Compatible provider 是顶层节点副本，跳过避免重复
+        .filter(|p| p.vehicle_type != "Compatible")
+        .flat_map(|p| p.proxies)
+        .collect())
+}
+
+/// scope=all 的节点全集：/proxies 顶层非组节点与各 provider 节点按名称去重、按名排序。
+/// providers 端点不可用时（如旧内核）退回顶层节点，与旧行为一致。
+async fn all_nodes(client: &ApiClient, proxies: &ProxiesResp) -> Vec<Proxy> {
+    let mut by_name: BTreeMap<String, Proxy> = proxies
+        .proxies
+        .values()
+        .filter(|p| !p.is_group())
+        .map(|p| (p.name.clone(), p.clone()))
+        .collect();
+    if let Ok(nodes) = fetch_provider_proxies(client).await {
+        for p in nodes {
+            by_name.entry(p.name.clone()).or_insert(p);
+        }
+    }
+    by_name.into_values().collect()
 }
 
 fn group_names(proxies: &ProxiesResp) -> Vec<String> {
@@ -157,9 +189,7 @@ async fn list(client: &ApiClient, group: Option<&str>) -> Result<()> {
             );
         }
         None => {
-            let mut nodes: Vec<&Proxy> =
-                proxies.proxies.values().filter(|p| !p.is_group()).collect();
-            nodes.sort_by(|a, b| a.name.cmp(&b.name));
+            let nodes = all_nodes(client, &proxies).await;
             let rows: Vec<Vec<String>> = nodes
                 .iter()
                 .map(|p| {
@@ -242,11 +272,10 @@ async fn test(client: &ApiClient, group: Option<&str>, timeout: u64) -> Result<(
         }
         None => {
             let proxies = fetch_proxies(client).await?;
-            let nodes: Vec<String> = proxies
-                .proxies
-                .values()
-                .filter(|p| !p.is_group())
-                .map(|p| p.name.clone())
+            let nodes: Vec<String> = all_nodes(client, &proxies)
+                .await
+                .into_iter()
+                .map(|p| p.name)
                 .collect();
 
             println!(

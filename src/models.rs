@@ -65,6 +65,21 @@ pub struct ProxiesResp {
     pub proxies: HashMap<String, Proxy>,
 }
 
+/// /providers/proxies 中的 provider：vehicleType 为 HTTP/File/Inline；
+/// 内置的 Compatible provider 是顶层节点副本，使用方需自行跳过
+#[derive(Deserialize)]
+pub struct Provider {
+    #[serde(rename = "vehicleType")]
+    pub vehicle_type: String,
+    #[serde(default)]
+    pub proxies: Vec<Proxy>,
+}
+
+#[derive(Deserialize)]
+pub struct ProvidersResp {
+    pub providers: HashMap<String, Provider>,
+}
+
 #[derive(Deserialize)]
 pub struct Rule {
     #[serde(rename = "type")]
