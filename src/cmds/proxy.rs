@@ -4,7 +4,7 @@
 //! （单节点测）端点；`update` 等价于 `sub update`（执行本机订阅更新脚本）。
 
 use crate::api::ApiClient;
-use crate::cli::ProxyAction;
+use crate::cli::{ProxyAction, SortArg};
 use crate::cmds::histogram;
 use crate::models::{ProvidersResp, ProxiesResp, Proxy};
 use crate::ui::{self, Column};
@@ -16,7 +16,7 @@ const TEST_URL: &str = "https://cp.cloudflare.com/generate_204";
 
 pub async fn run(client: &ApiClient, action: ProxyAction) -> Result<()> {
     match action {
-        ProxyAction::List { group } => list(client, group.as_deref()).await,
+        ProxyAction::List { group, sort } => list(client, group.as_deref(), sort).await,
         ProxyAction::Test { group, timeout } => test(client, group.as_deref(), timeout).await,
         ProxyAction::Select { group, name } => select(client, &group, &name).await,
         ProxyAction::Update => crate::cmds::sub::run(),
@@ -152,17 +152,47 @@ fn proxy_columns() -> [Column; 4] {
     ]
 }
 
-async fn list(client: &ApiClient, group: Option<&str>) -> Result<()> {
+/// 列表排序：delay（默认）按最近一次延迟升序，无延迟数据的排最后；name 按名称。
+/// 两种方式同键时都按名称兜底，保证输出稳定可复现。
+fn sort_nodes<T>(
+    items: &mut [T],
+    sort: SortArg,
+    name: impl Fn(&T) -> &str,
+    delay: impl Fn(&T) -> Option<u64>,
+) {
+    match sort {
+        SortArg::Delay => items.sort_by(|a, b| {
+            delay(a)
+                .unwrap_or(u64::MAX)
+                .cmp(&delay(b).unwrap_or(u64::MAX))
+                .then_with(|| name(a).cmp(name(b)))
+        }),
+        SortArg::Name => items.sort_by(|a, b| name(a).cmp(name(b))),
+    }
+}
+
+async fn list(client: &ApiClient, group: Option<&str>, sort: SortArg) -> Result<()> {
     let proxies = fetch_proxies(client).await?;
     match group {
         Some(name) => {
             let name = resolve_group(&proxies, name)?;
             let g = find_group(&proxies, &name)?;
             let nodes = g.all.as_deref().unwrap_or(&[]);
-            let rows: Vec<Vec<String>> = nodes
+            // (节点名, /proxies 中的节点信息)：查不到的成员无法取类型与延迟
+            let mut entries: Vec<(&String, Option<&Proxy>)> = nodes
                 .iter()
-                .map(|node| {
-                    let (ptype, delay) = match proxies.proxies.get(node) {
+                .map(|node| (node, proxies.proxies.get(node)))
+                .collect();
+            sort_nodes(
+                &mut entries,
+                sort,
+                |(node, _)| node.as_str(),
+                |(_, p)| p.and_then(|p| p.last_delay()),
+            );
+            let rows: Vec<Vec<String>> = entries
+                .into_iter()
+                .map(|(node, p)| {
+                    let (ptype, delay) = match p {
                         Some(p) => (ui::dim(&p.ptype), delay_cell(p.last_delay())),
                         None => (ui::dim("?"), ui::dim("-")),
                     };
@@ -190,8 +220,10 @@ async fn list(client: &ApiClient, group: Option<&str>) -> Result<()> {
         }
         None => {
             let nodes = all_nodes(client, &proxies).await;
-            let rows: Vec<Vec<String>> = nodes
-                .iter()
+            let mut entries: Vec<&Proxy> = nodes.iter().collect();
+            sort_nodes(&mut entries, sort, |p| p.name.as_str(), |p| p.last_delay());
+            let rows: Vec<Vec<String>> = entries
+                .into_iter()
                 .map(|p| {
                     vec![
                         p.name.clone(),
@@ -326,7 +358,8 @@ async fn select(client: &ApiClient, group: &str, name: &str) -> Result<()> {
 
 #[cfg(test)]
 mod tests {
-    use super::resolve;
+    use super::{resolve, sort_nodes};
+    use crate::cli::SortArg;
 
     const GROUPS: [&str; 5] = [
         "GLOBAL",
@@ -360,5 +393,38 @@ mod tests {
     fn 无匹配与空输入报错() {
         assert!(resolve("不存在", GROUPS, "策略组").is_err());
         assert!(resolve("", GROUPS, "策略组").is_err());
+    }
+
+    fn names<'a>(items: &'a [(&'a str, Option<u64>)]) -> Vec<&'a str> {
+        items.iter().map(|(n, _)| *n).collect()
+    }
+
+    #[test]
+    fn 按延迟升序_无数据排最后() {
+        let mut items = vec![
+            ("香港 01", Some(320)),
+            ("香港 02", None),
+            ("香港 03", Some(80)),
+            ("香港 04", Some(150)),
+        ];
+        sort_nodes(&mut items, SortArg::Delay, |(n, _)| *n, |(_, d)| *d);
+        assert_eq!(
+            names(&items),
+            vec!["香港 03", "香港 04", "香港 01", "香港 02"]
+        );
+    }
+
+    #[test]
+    fn 延迟相同按名称兜底() {
+        let mut items = vec![("b", Some(100)), ("a", Some(100)), ("c", None)];
+        sort_nodes(&mut items, SortArg::Delay, |(n, _)| *n, |(_, d)| *d);
+        assert_eq!(names(&items), vec!["a", "b", "c"]);
+    }
+
+    #[test]
+    fn 按名称排序() {
+        let mut items = vec![("b", Some(10)), ("a", None), ("c", Some(99))];
+        sort_nodes(&mut items, SortArg::Name, |(n, _)| *n, |(_, d)| *d);
+        assert_eq!(names(&items), vec!["a", "b", "c"]);
     }
 }

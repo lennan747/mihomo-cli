@@ -149,18 +149,26 @@ mihomo-cli status
 
 #### proxy list
 
-列出节点；指定策略组名则列出该组节点（标记当前选中 `★`），否则列出全部节点（含 proxy-providers 订阅节点，与顶层节点按名称去重合并）。
+列出节点；指定策略组名则列出该组节点（标记当前选中 `★`），否则列出全部节点（含 proxy-providers 订阅节点，与顶层节点按名称去重合并）。默认按最近一次延迟**升序**排列，无延迟数据的节点排最后。
 
 ```
-mihomo-cli proxy list [group]
+mihomo-cli proxy list [group] [--sort <delay|name>]
 ```
+
+| 选项 | 必填 | 说明 |
+|---|---|---|
+| `--sort <delay\|name>` | 否 | 排序方式，默认 `delay`：按最近一次延迟升序，无数据排最后；`name`：按名称排序 |
 
 ```bash
-mihomo-cli proxy list          # 全部节点（含 proxy-providers 节点、类型与最近一次延迟）
+mihomo-cli proxy list          # 全部节点，按最近一次延迟升序（无数据排最后）
 mihomo-cli proxy list PROXY    # 某策略组的节点，★ 标记当前选中
 mihomo-cli proxy list 国外     # 组名支持唯一子串匹配（→ 🌐 国外流量）
+mihomo-cli proxy list --sort name  # 改按名称排序
 ```
 
+> 延迟取 mihomo 缓存的最近一次测速记录（`proxy test` 或内核 url-test 产生），未测过的节点显示 `-` 并排最后；
+> 想要**实时**排序结果用 [`proxy test`](#proxy-test)，它会主动测速并按延迟输出。
+>
 > mihomo 的代理/策略组**没有 ID，只能用名称寻址**；名称多带 emoji 前缀（如 `🌐 国外流量`），
 > 因此组名与节点名支持**唯一子串匹配**（大小写不敏感），匹配不唯一时会列出候选让你写得更具体。
 

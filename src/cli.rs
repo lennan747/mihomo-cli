@@ -115,8 +115,14 @@ pub enum Command {
 pub enum ProxyAction {
     /// 列出节点；指定策略组名则列出该组节点，否则列出全部节点
     ///
-    /// 组名支持唯一子串匹配（如 `国外` → `🌐 国外流量`），匹配不唯一时会列出候选
-    List { group: Option<String> },
+    /// 组名支持唯一子串匹配（如 `国外` → `🌐 国外流量`），匹配不唯一时会列出候选。
+    /// 默认按最近一次延迟升序排列（无延迟数据排最后），`--sort name` 改按名称排序
+    List {
+        group: Option<String>,
+        /// 排序方式：delay（默认）按最近一次延迟升序，无数据排最后；name 按名称
+        #[arg(long, value_enum, default_value = "delay")]
+        sort: SortArg,
+    },
 
     /// 延迟测试并排序；指定策略组名只测该组，否则测全部节点
     Test {
@@ -211,4 +217,12 @@ impl ModeArg {
             ModeArg::Direct => "direct",
         }
     }
+}
+
+#[derive(Clone, ValueEnum)]
+pub enum SortArg {
+    /// 按最近一次延迟升序，无延迟数据的排最后
+    Delay,
+    /// 按名称排序
+    Name,
 }
