@@ -4,6 +4,12 @@
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
+## [0.4.0] - 2026-10-20
+
+### 新增
+
+- `proxy list` 新增 `--sort <delay|name>`：默认 `delay`，按最近一次延迟升序排列（无延迟数据的节点排最后，同键按名称兜底保证输出稳定），`--sort name` 改按名称排序。策略组视图与 scope=all 全节点视图同样生效。延迟取 mihomo 缓存的最近一次测速记录，未测速的节点显示 `-`；实时排序仍用 `proxy test`。
+
 ## [0.3.1] - 2026-10-08
 
 ### 修复
