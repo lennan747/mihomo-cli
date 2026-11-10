@@ -33,7 +33,7 @@ irm https://raw.githubusercontent.com/lennan747/mihomo-cli/master/install.ps1 | 
 安装后确认版本：
 
 ```shell
-mihomo-cli --version   # 期望输出 mihomo-cli 0.1.x
+mihomo-cli --version   # 应输出版本号，与安装的 release 一致（如 mihomo-cli 0.4.0）
 ```
 
 ## Step 2 — 验证 / Verify
@@ -49,11 +49,11 @@ mihomo-cli status
 
 ## Step 3 — Secret（仅在 mihomo 配置了鉴权时需要 / only if auth is enabled）
 
-secret 按以下顺序解析，通常**无需任何配置**：
+secret 按以下优先级解析（前者覆盖后者），通常**无需任何配置**：
 
-1. `~/.config/mihomo/mihomo.env` 中的 `MIHOMO_SECRET`（与 systemd 用户服务共享的环境文件，自动读取）；
+1. 命令行 `-s/--secret`；
 2. 环境变量 `MIHOMO_SECRET`；
-3. 命令行 `-s/--secret`。
+3. `~/.config/mihomo/mihomo.env` 中的 `MIHOMO_SECRET`（与 systemd 用户服务共享的环境文件，自动读取）。
 
 仅当以上均未提供且 mihomo 开启了鉴权时才需要用户参与：向用户索取 secret 后 `export MIHOMO_SECRET=<secret>` 或传 `-s`。
 Only ask the user for the secret when none of the sources above provide it and auth is enabled.
