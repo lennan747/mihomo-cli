@@ -32,7 +32,7 @@ Rust edition 2021，无 workspace，单 crate（`rust-version = 1.80`）。GitHu
 - `src/github.rs` — GitHub Release 查询与版本号比较的共享工具（GitHub API → 302 跳转，直连失败回退本机 7890 代理；`normalize_version`），供 `version` 与 `self-upgrade` 复用
 - `src/models.rs` — API 响应的 serde 模型（Version/Configs/Proxy/Rule/Connection 等）
 - `src/ui.rs` — 终端渲染工具箱：圆角框（`Box`）+ 表格 dashboard（`table_dashboard`）+ 键值面板（`kv_panel`）+ 状态条（`status_bar`）；可见宽度按 CJK=2 计算、ANSI 不计宽，颜色仅在 TTY 且未设 `NO_COLOR` 时启用。**所有表格/框线输出必须走此模块**，参考 qq-triage 的样式
-- `src/cmds/` — 每个子命令一个模块：`status`、`proxy`（list/test/select/update；策略组名与节点名支持唯一子串匹配，见 `proxy::resolve`）、`group`、`rule`、`conn`、`logs`（WebSocket 实时日志）、`mode`、`config`（热重载）、`service`（systemd 用户服务）、`sub`（订阅管理）、`version`（查 GitHub 最新 release）、`upgrade`（调 `/upgrade` 自升级内核）、`self_upgrade`（从 GitHub Releases 下载并 SHA256 校验后原地替换 CLI 自身）；`cmds/mod.rs` 提供共享工具函数如 `human_bytes`
+- `src/cmds/` — 每个子命令一个模块：`status`、`proxy`（list/test/select/update；策略组名与节点名支持唯一子串匹配，见 `proxy::resolve`）、`group`、`rule`、`conn`、`logs`（WebSocket 实时日志）、`mode`、`config`（热重载）、`service`（systemd 用户服务）、`sub`（订阅管理：命名订阅 list/add/use/remove 与 url/set-url/update；数据在 `~/.config/mihomo/subscriptions/`，`subscription.url` 始终是更新脚本读取的当前地址）、`version`（查 GitHub 最新 release）、`upgrade`（调 `/upgrade` 自升级内核）、`self_upgrade`（从 GitHub Releases 下载并 SHA256 校验后原地替换 CLI 自身）；`cmds/mod.rs` 提供共享工具函数如 `human_bytes`
 
 新增子命令的惯例：在 `cli.rs` 的 `Command` 枚举加变体并写中文 doc 注释 → 在 `cmds/` 下建同名模块 → 在 `main.rs` 的 match 中分发。
 
@@ -41,13 +41,13 @@ Rust edition 2021，无 workspace，单 crate（`rust-version = 1.80`）。GitHu
 该工具强耦合于本机的 mihomo 部署环境（大多数命令离开此环境无法真正执行）：
 
 - mihomo 内核二进制在 `~/.local/bin/mihomo`，由 systemd 用户服务 `mihomo.service` 管理（`~/.config/systemd/user/` 下还有 `mihomo-update.service` / `mihomo-update.timer`，每小时自动更新订阅）
-- 配置目录 `~/.config/mihomo/`：`config.yaml`（运行配置）、`mihomo.env`（含 `MIHOMO_SECRET`，机密文件，**不要读取或输出其内容**）、`subscription.url`（订阅地址）、geoip/geosite 数据文件
+- 配置目录 `~/.config/mihomo/`：`config.yaml`（运行配置）、`mihomo.env`（含 `MIHOMO_SECRET`，机密文件，**不要读取或输出其内容**）、`subscription.url`（当前订阅地址，更新脚本读取）、`subscriptions/`（命名订阅 `<名称>.url` 与 `current` 标记）、geoip/geosite 数据文件
 - 订阅更新委托给 shell 脚本 `~/.local/bin/mihomo-update`（curl 拉取 → sed 修正 → `mihomo -t` 校验 → 热重载 API）；`sub update` 与 `proxy update` 都是执行该脚本
 - `version` 命令需要访问 GitHub API，失败时自动回退走 `http://127.0.0.1:7890` 混合代理端口
 
 ## 测试
 
-- 单元测试：`cargo test`（纯函数：`human_bytes`、`parse_env_file`、`ApiClient::url` 编码、版本号 `normalize_version`、`self_upgrade` 的平台映射/资产名/SHA256SUMS 解析、`ui` 的可见宽度/截断/框对齐；以 `#[cfg(test)]` 模块内联在各源文件）
+- 单元测试：`cargo test`（纯函数：`human_bytes`、`parse_env_file`、`ApiClient::url` 编码、版本号 `normalize_version`、`self_upgrade` 的平台映射/资产名/SHA256SUMS 解析、`sub` 的订阅名校验/地址脱敏/命名订阅存取与切换、`ui` 的可见宽度/截断/框对齐；以 `#[cfg(test)]` 模块内联在各源文件）
 - 静态检查：`cargo clippy --all-targets -- -D warnings`
 - 真实环境冒烟：在装有 mihomo 的本机上实际运行子命令验证（如 `mihomo-cli status`、`mihomo-cli proxy list`），只读优先
 

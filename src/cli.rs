@@ -83,7 +83,7 @@ pub enum Command {
         action: ServiceAction,
     },
 
-    /// 订阅管理：查看/设置订阅地址，拉取最新节点
+    /// 订阅管理：命名保存多份订阅、切换当前订阅、拉取更新
     Sub {
         #[command(subcommand)]
         action: SubAction,
@@ -188,6 +188,35 @@ pub enum ServiceAction {
 
 #[derive(Subcommand)]
 pub enum SubAction {
+    /// 列出命名订阅（地址默认脱敏），★ 标记当前生效的订阅
+    List,
+
+    /// 添加命名订阅（不自动切换）
+    Add {
+        /// 订阅名（1-64 字符，不能含 / \ : * ? " < > |）
+        name: String,
+        /// 订阅地址（http:// 或 https://）
+        url: String,
+        /// 同名订阅已存在时覆盖
+        #[arg(long)]
+        force: bool,
+    },
+
+    /// 切换当前订阅（同步更新脚本读取的 subscription.url）
+    Use {
+        /// 订阅名
+        name: String,
+        /// 切换后立即执行订阅更新脚本
+        #[arg(long)]
+        update: bool,
+    },
+
+    /// 删除命名订阅（正在生效的订阅需先切换走）
+    Remove {
+        /// 订阅名
+        name: String,
+    },
+
     /// 拉取订阅并热更新配置
     Update,
 
@@ -198,7 +227,7 @@ pub enum SubAction {
         reveal: bool,
     },
 
-    /// 设置订阅地址（写入 ~/.config/mihomo/subscription.url，每小时定时更新同样生效）
+    /// 直接设置当前地址（不属于任何命名订阅；每小时定时更新同样生效）
     SetUrl { url: String },
 }
 

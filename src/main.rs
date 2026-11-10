@@ -62,6 +62,10 @@ async fn run() -> Result<()> {
         } => cmds::config::run(&client).await,
         Command::Service { action } => cmds::service::run(&client, action).await,
         Command::Sub { action } => match action {
+            SubAction::List => cmds::sub::list(),
+            SubAction::Add { name, url, force } => cmds::sub::add(&name, &url, force),
+            SubAction::Use { name, update } => cmds::sub::use_sub(&name, update),
+            SubAction::Remove { name } => cmds::sub::remove(&name),
             SubAction::Update => cmds::sub::run(),
             SubAction::Url { reveal } => cmds::sub::url(reveal),
             SubAction::SetUrl { url } => cmds::sub::set_url(&url),

@@ -4,6 +4,13 @@
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
+## [Unreleased]
+
+### 新增
+
+- `sub` 支持命名多订阅：`sub add <名称> <URL>` 保存（`~/.config/mihomo/subscriptions/<名称>.url`，0600；重名需 `--force`）、`sub list` 列表（地址默认脱敏，★ 标记生效项）、`sub use <名称> [--update]` 切换、`sub remove <名称>` 删除（生效中的订阅需先切换走）。切换时同步改写 `subscription.url` 与 `subscriptions/current`，更新脚本与每小时定时任务无需改动。
+- `sub set-url` 现在只设置「未命名」的当前地址，并清除命名订阅标记；`sub url` 会标注当前地址来自哪个命名订阅。
+
 ## [0.4.0] - 2026-10-20
 
 ### 新增

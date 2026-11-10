@@ -6,6 +6,8 @@
 
 管理本机 mihomo (Clash Meta) 实例的命令行工具。通过 mihomo 的外部控制器 REST API（默认 `http://127.0.0.1:9090`）与 `systemctl --user` 用户服务进行交互，提供状态查看、节点切换、延迟测试、日志跟踪、订阅更新、内核升级等功能。
 
+> **能力边界**：mihomo-cli 只是 mihomo 内核的控制端，**不包含内核本体**，也不提供 GUI、系统代理开关或 TUN 接管。它管理的是本机已部署并运行的 mihomo 实例；若尚未部署内核，请先按 mihomo 官方文档安装并启动，再用本工具管理。它也**不替代** Clash Verge 等「内核 + GUI + 系统代理/TUN」一体化客户端。
+
 ## 特性
 
 - **状态总览**：版本、运行模式、监听端口、各策略组当前选中，一屏可见。
@@ -13,7 +15,7 @@
 - **分流与连接**：分流规则列表、活动连接查看（含链路与流量）、一键关闭全部连接。
 - **实时日志**：WebSocket 跟踪 mihomo 日志流，按级别过滤，Ctrl-C 退出。
 - **热操作**：运行模式切换、配置热重载，均不重启服务。
-- **服务与订阅**：systemd 用户服务重启/状态查询；订阅地址管理与手动更新（与每小时定时任务走同一脚本）。
+- **服务与订阅**：systemd 用户服务重启/状态查询；命名保存多份订阅、一键切换，手动更新与每小时定时任务走同一脚本。
 - **版本与升级**：对照 GitHub 最新 release 检查更新，调用 `/upgrade` 端点在线升级内核；`self-upgrade` 从 GitHub Releases 下载并 SHA256 校验后原地升级 CLI 自身。
 - **终端样式**：统一的圆角框 dashboard（标题内嵌顶边、底栏汇总），按可见宽度对齐（中文/emoji 不错位），TTY 自适应颜色。
 
@@ -44,7 +46,7 @@
 
 ## 安装
 
-> 要求：Linux / macOS arm64 / Windows x86_64（`service`/`sub` 子命令依赖 systemd 用户服务与订阅脚本，仅 Linux 可用；其余命令跨平台）；源码安装要求 Rust >= 1.80；一键安装支持 SHA256 校验。
+> 要求：Linux / macOS arm64 / Windows x86_64（`service` 依赖 systemd 用户服务，`sub update` / `sub use --update` 依赖本机订阅更新脚本，仅 Linux 可用；其余命令跨平台）；源码安装要求 Rust >= 1.80；一键安装支持 SHA256 校验。
 
 ### 一键安装（推荐）
 
@@ -101,8 +103,9 @@ mihomo-cli proxy select PROXY "香港 01"
 # 4. 跟踪实时日志（Ctrl-C 退出）
 mihomo-cli logs
 
-# 5. 更新订阅并热重载
-mihomo-cli sub update
+# 5. 订阅：查看命名订阅、切换并热重载
+mihomo-cli sub list
+mihomo-cli sub use 机场A --update
 ```
 
 ## 命令
@@ -335,7 +338,57 @@ mihomo-cli service status
 
 ### sub
 
-订阅管理：查看/设置订阅地址，拉取最新节点。
+订阅管理：命名保存多份订阅、切换当前订阅、拉取更新。
+
+数据布局（`~/.config/mihomo/` 下）：
+
+```text
+subscription.url            # 当前生效地址（更新脚本读取，兼容旧行为）
+subscriptions/current       # 当前生效的命名订阅名
+subscriptions/机场A.url     # 命名订阅地址（0600）
+subscriptions/机场B.url
+```
+
+`sub use` 把命名订阅的地址同步到 `subscription.url` 并记录 `current`；`sub update` 与每小时的 `mihomo-update.timer` 始终读取 `subscription.url`，因此**切换订阅不需要改更新脚本**。
+
+#### sub list
+
+列出命名订阅，地址默认脱敏；`★` 标记当前生效的订阅。当前生效的是未命名地址（`sub set-url` 设置）时，底栏会给出提示。
+
+```
+mihomo-cli sub list
+```
+
+#### sub add
+
+保存一份命名订阅（**不自动切换**）。同名订阅已存在时报错，需 `--force` 覆盖；若覆盖的正是当前生效订阅，会同步刷新当前地址。
+
+```
+mihomo-cli sub add <名称> <URL>
+mihomo-cli sub add 机场A https://example.com/subscribe?token=xxx
+```
+
+> 订阅名 1–64 字符，不能含 `/ \ : * ? " < > |` 或控制字符，不能以 `.` 开头（订阅名会作为文件名）。地址仅接受 `http://` / `https://`。
+
+#### sub use
+
+切换当前订阅：把该订阅地址写入 `subscription.url`。加 `--update` 则切换后立即执行订阅更新脚本。
+
+```
+mihomo-cli sub use <名称> [--update]
+```
+
+```bash
+mihomo-cli sub use 机场A --update
+```
+
+#### sub remove
+
+删除命名订阅。正在生效的订阅必须先 `sub use` 到其他订阅，避免当前地址指向已删除的条目。
+
+```
+mihomo-cli sub remove <名称>
+```
 
 #### sub update
 
@@ -347,7 +400,7 @@ mihomo-cli sub update
 
 #### sub url
 
-查看当前订阅地址：优先 `~/.config/mihomo/subscription.url`，其次从更新脚本中提取默认值。
+查看当前订阅地址：优先 `~/.config/mihomo/subscription.url`，并标注来源是哪个命名订阅；文件不存在时回退到更新脚本内的默认值。
 
 输出默认脱敏（保留域名与路径前缀、隐藏 token）；需完整回显时用 `--reveal`（勿贴入公开渠道）。
 
@@ -357,7 +410,7 @@ mihomo-cli sub url [--reveal]
 
 #### sub set-url
 
-设置订阅地址，写入 `~/.config/mihomo/subscription.url`（每小时定时更新同样读取此文件）。
+设置「未命名」的当前地址（不属于任何命名订阅），写入 `~/.config/mihomo/subscription.url` 并清除命名订阅标记；每小时定时更新同样读取此文件。命名订阅请用 `sub add` + `sub use`。
 
 ```
 mihomo-cli sub set-url <URL>
@@ -425,7 +478,7 @@ mihomo-cli self-upgrade --version v0.4.0
 本工具强耦合于本机的 mihomo 部署环境（大多数命令离开此环境无法真正执行）：
 
 - mihomo 内核二进制在 `~/.local/bin/mihomo`，由 systemd 用户服务 `mihomo.service` 管理；`~/.config/systemd/user/` 下另有 `mihomo-update.service` / `mihomo-update.timer`，每小时自动更新订阅。
-- 配置目录 `~/.config/mihomo/`：`config.yaml`（运行配置）、`mihomo.env`（服务环境变量，含 `MIHOMO_SECRET`）、`subscription.url`（订阅地址）、geoip/geosite 数据文件。
+- 配置目录 `~/.config/mihomo/`：`config.yaml`（运行配置）、`mihomo.env`（服务环境变量，含 `MIHOMO_SECRET`）、`subscription.url`（当前订阅地址）、`subscriptions/`（命名订阅与 `current` 标记）、geoip/geosite 数据文件。
 - 订阅更新委托给 shell 脚本 `~/.local/bin/mihomo-update`（curl 拉取 → sed 修正 → `mihomo -t` 校验 → 热重载）；`sub update` 与 `proxy update` 都是执行该脚本。
 - `version` 命令需要访问 GitHub API，失败时自动回退走 `http://127.0.0.1:7890` 混合代理端口。
 
@@ -440,7 +493,7 @@ API 鉴权密钥按以下顺序解析：
 安全约定：
 
 - `MIHOMO_SECRET` 绝不会出现在日志或表格输出中。
-- `sub url` / `sub set-url` 输出订阅地址时默认脱敏（隐藏 token），需完整查看时用 `sub url --reveal`；`~/.config/mihomo/subscription.url` 文件权限固定为 0600。
+- `sub list` / `sub url` / `sub add` 输出订阅地址时默认脱敏（隐藏 token），需完整查看时用 `sub url --reveal`；`subscription.url`、`subscriptions/*.url` 与 `subscriptions/current` 权限固定为 0600，新建的 `subscriptions/` 目录为 0700。
 - `~/.config/mihomo/` 下的文件多为机密或敏感数据（`mihomo.env` 含鉴权密钥、`subscription.url` 含订阅 token），请勿提交到仓库或分享给他人。
 - 订阅更新脚本使用 `mihomo -t` 校验通过后才替换 `config.yaml`，CLI 的 `sub` 相关命令不绕过这一安全步骤。
 
